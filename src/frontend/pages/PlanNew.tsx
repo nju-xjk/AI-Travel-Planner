@@ -21,6 +21,12 @@ export default function PlanNew() {
   const [speechText, setSpeechText] = useState<string>('');
   const [speechConfidence, setSpeechConfidence] = useState<number | null>(null);
   const [speechMsg, setSpeechMsg] = useState<string>('');
+  const [recording, setRecording] = useState(false);
+  const recorderRef = React.useRef<MediaRecorder | null>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
+  const chunksRef = React.useRef<Blob[]>([]);
+  const [recordMs, setRecordMs] = useState(0);
+  const timerRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
     (async () => {
@@ -57,6 +63,46 @@ export default function PlanNew() {
     if (est.data) setBudget(est.data);
   };
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mpeg';
+      const rec = new MediaRecorder(stream, { mimeType });
+      chunksRef.current = [];
+      rec.ondataavailable = (evt) => {
+        if (evt.data && evt.data.size > 0) chunksRef.current.push(evt.data);
+      };
+      rec.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const file = new File([blob], `recording.${mimeType.includes('webm') ? 'webm' : 'mp3'}`, { type: mimeType });
+        setAudioFile(file);
+        // stop tracks
+        stream.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+        recorderRef.current = null;
+        setRecording(false);
+        if (timerRef.current) {
+          window.clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+      };
+      recorderRef.current = rec;
+      rec.start();
+      setRecording(true);
+      setRecordMs(0);
+      timerRef.current = window.setInterval(() => setRecordMs(prev => prev + 100), 100);
+    } catch (err: any) {
+      setSpeechMsg(`无法开始录音：${err.message || '未知错误'}`);
+    }
+  };
+
+  const stopRecording = () => {
+    if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+      recorderRef.current.stop();
+    }
+  };
+
   return (
     <div className="container" style={{ maxWidth: 980 }}>
       <div className="grid two">
@@ -75,10 +121,16 @@ export default function PlanNew() {
           </form>
         </Card>
 
-        <Card title="语音识别（上传音频）">
+        <Card title="语音识别（录音或上传）">
           <div className="stack">
             <div className="row" style={{ alignItems: 'center', gap: 12 }}>
-              <div className="label">音频文件</div>
+              <Button type="button" onClick={recording ? stopRecording : startRecording}>
+                {recording ? '停止录音' : '开始录音'}
+              </Button>
+              <span className="note" style={{ minWidth: 140 }}>
+                {recording ? `录音中… ${Math.floor(recordMs / 1000)}s` : (audioFile ? `就绪：${audioFile.name}` : '未选择音频')}
+              </span>
+              <span className="label" style={{ marginLeft: 12 }}>或上传文件</span>
               <input type="file" accept="audio/*" onChange={e => setAudioFile(e.target.files?.[0] ?? null)} />
             </div>
             <div className="row" style={{ alignItems: 'center', gap: 12 }}>
@@ -93,7 +145,7 @@ export default function PlanNew() {
                 setSpeechMsg('');
                 setSpeechText('');
                 setSpeechConfidence(null);
-                if (!audioFile) {
+                if (!audioFile || recording) {
                   setSpeechMsg('请先选择音频文件');
                   return;
                 }
@@ -117,7 +169,7 @@ export default function PlanNew() {
                 } catch (err: any) {
                   setSpeechMsg('识别调用异常');
                 }
-              }}>上传并识别</Button>
+              }}>识别当前音频</Button>
               {speechMsg && <span className="note">{speechMsg}</span>}
             </div>
             {(speechText || speechConfidence != null) && (
