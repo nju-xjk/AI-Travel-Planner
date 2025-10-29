@@ -7,6 +7,7 @@ import PlanShow from './pages/PlanShow';
 import Settings from './pages/Settings';
 import Expenses from './pages/Expenses';
 import NavBar from './components/NavBar';
+import RequireAuth from './components/RequireAuth';
 
 export default function App() {
   return (
@@ -14,13 +15,13 @@ export default function App() {
       <NavBar />
       <main className="container">
         <Routes>
-          <Route path="/" element={<Navigate to="/plan/new" replace />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/plan/new" element={<PlanNew />} />
-          <Route path="/plan/:id" element={<PlanShow />} />
-          <Route path="/expenses" element={<Expenses />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/plan/new" element={<RequireAuth><PlanNew /></RequireAuth>} />
+          <Route path="/plan/:id" element={<RequireAuth><PlanShow /></RequireAuth>} />
+          <Route path="/expenses" element={<RequireAuth><Expenses /></RequireAuth>} />
+          <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
         </Routes>
         <div className="footer">AI Travel Planner · Better trips with smarter planning ✈️</div>
       </main>

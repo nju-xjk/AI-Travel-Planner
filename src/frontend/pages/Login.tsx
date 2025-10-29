@@ -24,6 +24,7 @@ export default function Login() {
     setLoading(false);
     if (res?.data?.token) {
       localStorage.setItem('token', res.data.token);
+      window.dispatchEvent(new Event('auth-changed'));
       setMsg('登录成功，即将跳转...');
       setTimeout(() => navigate('/plan/new'), 600);
     } else {
