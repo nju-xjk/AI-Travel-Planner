@@ -3,6 +3,7 @@ import { api } from '../api';
 import Card from '../components/Card';
 import Input from '../components/Input';
 import Button from '../components/Button';
+import MapView from '../components/MapView';
 
 type Itinerary = { destination: string; start_date: string; end_date: string; days: any[] };
 
@@ -14,6 +15,18 @@ export default function PlanNew() {
   const [budget, setBudget] = useState<any>(null);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [amapKey, setAmapKey] = useState<string | undefined>(undefined);
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await api<Record<string, any>>('/settings');
+        if (res.data && typeof res.data.AMAP_API_KEY === 'string') {
+          setAmapKey(res.data.AMAP_API_KEY);
+        }
+      } catch { /* noop */ }
+    })();
+  }, []);
 
   const onGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,19 +71,25 @@ export default function PlanNew() {
         </Card>
 
         {result && (
-          <Card title="行程">
-            <div className="kpi">📍 {result.destination} · 🗓️ {result.start_date} → {result.end_date}</div>
+          <>
+            <Card title="行程">
+              <div className="kpi">📍 {result.destination} · 🗓️ {result.start_date} → {result.end_date}</div>
+              <div className="spacer" />
+              <pre style={{ background: '#0a1020', padding: 12, borderRadius: 12, border: '1px solid var(--border)', overflow: 'auto' }}>{JSON.stringify(result, null, 2)}</pre>
+            </Card>
             <div className="spacer" />
-            <pre style={{ background: '#0a1020', padding: 12, borderRadius: 12, border: '1px solid var(--border)', overflow: 'auto' }}>{JSON.stringify(result, null, 2)}</pre>
-          </Card>
+            <MapView itinerary={result} apiKey={amapKey} />
+          </>
         )}
       </div>
 
       {budget && (
-        <div className="spacer" />
-        <Card title="预算估算">
-          <pre style={{ background: '#0a1020', padding: 12, borderRadius: 12, border: '1px solid var(--border)', overflow: 'auto' }}>{JSON.stringify(budget, null, 2)}</pre>
-        </Card>
+        <>
+          <div className="spacer" />
+          <Card title="预算估算">
+            <pre style={{ background: '#0a1020', padding: 12, borderRadius: 12, border: '1px solid var(--border)', overflow: 'auto' }}>{JSON.stringify(budget, null, 2)}</pre>
+          </Card>
+        </>
       )}
     </div>
   );

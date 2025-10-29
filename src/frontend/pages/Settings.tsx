@@ -38,6 +38,8 @@ export default function Settings() {
               <div className="label">llmEnabled</div>
               <input type="checkbox" checked={!!settings.llmEnabled} onChange={e => onChange('llmEnabled', e.target.checked)} />
             </div>
+            <Input label="LLM_API_KEY" placeholder="用于真实 LLM 提供商" value={settings.LLM_API_KEY || ''} onChange={e => onChange('LLM_API_KEY', e.target.value)} />
+            <Input label="AMAP_API_KEY" placeholder="用于高德地图 JSAPI" value={settings.AMAP_API_KEY || ''} onChange={e => onChange('AMAP_API_KEY', e.target.value)} />
           </div>
         </Card>
 
