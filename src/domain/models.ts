@@ -27,6 +27,11 @@ export interface Segment {
   endTime?: string;   // e.g., HH:mm
   location?: string;
   notes?: string;
+  // Extended optional fields for budget and richer semantics
+  type?: 'transport' | 'accommodation' | 'food' | 'entertainment' | 'attraction' | 'shopping' | 'other';
+  placeId?: string;
+  costEstimate?: number;
+  timeRange?: string;
 }
 
 export interface PlanDay {

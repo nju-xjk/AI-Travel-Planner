@@ -5,7 +5,14 @@ export const DaySegmentSchema = z.object({
   startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   location: z.string().min(1).optional(),
-  notes: z.string().min(1).optional()
+  notes: z.string().min(1).optional(),
+  // Extended optional fields for richer itinerary semantics and budget integration
+  type: z
+    .enum(['transport', 'accommodation', 'food', 'entertainment', 'attraction', 'shopping', 'other'])
+    .optional(),
+  placeId: z.string().optional(),
+  costEstimate: z.number().positive().optional(),
+  timeRange: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/).optional()
 });
 
 export const ItineraryDaySchema = z.object({

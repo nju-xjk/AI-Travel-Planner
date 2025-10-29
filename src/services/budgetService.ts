@@ -15,6 +15,9 @@ export interface EstimateBudgetInput {
   end_date: string;
   party_size: number;
   daysCount?: number;
+  itinerary?: {
+    days: { day_index: number; segments: { type?: string; costEstimate?: number }[] }[];
+  };
 }
 
 function calculateDaysCount(start: string, end: string): number {
@@ -47,25 +50,60 @@ export class BudgetService {
       throw err;
     }
 
-    // Base per-person per-day rules (CNY)
-    const perDay = {
-      accommodation: 300,
-      food: 120,
-      transport: 50,
-      entertainment: 80
-    };
-
-    const breakdown = {
-      accommodation: perDay.accommodation * daysCount * ps,
-      food: perDay.food * daysCount * ps,
-      transport: perDay.transport * daysCount * ps,
-      entertainment: perDay.entertainment * daysCount * ps,
+    const warnings: string[] = [];
+    let breakdown: Record<string, number> = {
+      accommodation: 0,
+      food: 0,
+      transport: 0,
+      entertainment: 0,
       shopping: 0,
       other: 0
-    } as Record<string, number>;
-    const total = Object.values(breakdown).reduce((sum, v) => sum + v, 0);
+    };
 
-    const warnings: string[] = [];
+    const itineraryDays = input.itinerary?.days ?? [];
+    if (Array.isArray(itineraryDays) && itineraryDays.length > 0) {
+      // Per-segment coefficients (CNY) used when costEstimate missing
+      const perSegment = {
+        transport: 50,
+        food: 60,
+        entertainment: 80,
+        accommodation: 300, // treat each accommodation segment as a night
+        shopping: 0,
+        other: 0
+      } as Record<string, number>;
+
+      let missingType = false;
+      for (const day of itineraryDays) {
+        for (const seg of day.segments ?? []) {
+          const rawType = seg.type ?? 'other';
+          const type = rawType === 'attraction' ? 'entertainment' : rawType;
+          if (!seg.type) missingType = true;
+          if (Number.isFinite(seg.costEstimate) && (seg.costEstimate as number) > 0) {
+            breakdown[type] = (breakdown[type] ?? 0) + (seg.costEstimate as number);
+          } else {
+            breakdown[type] = (breakdown[type] ?? 0) + (perSegment[type] ?? 0) * ps;
+          }
+        }
+      }
+      if (missingType) warnings.push('Some segments lack type; estimates may be rough.');
+    } else {
+      // Base per-person per-day rules (CNY) fallback
+      const perDay = {
+        accommodation: 300,
+        food: 120,
+        transport: 50,
+        entertainment: 80
+      };
+      breakdown = {
+        accommodation: perDay.accommodation * daysCount * ps,
+        food: perDay.food * daysCount * ps,
+        transport: perDay.transport * daysCount * ps,
+        entertainment: perDay.entertainment * daysCount * ps,
+        shopping: 0,
+        other: 0
+      } as Record<string, number>;
+    }
+    const total = Object.values(breakdown).reduce((sum, v) => sum + v, 0);
     // Simple warning heuristics
     if (total > 5000) warnings.push('Estimated total exceeds 5,000 CNY. Consider adjusting plan.');
     if (ps >= 5) warnings.push('Large party size may require group booking arrangements.');

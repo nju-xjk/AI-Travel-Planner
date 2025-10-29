@@ -11,6 +11,11 @@ export interface DaySegment {
   endTime?: string;
   location?: string;
   notes?: string;
+  // Extended optional fields
+  type?: 'transport' | 'accommodation' | 'food' | 'entertainment' | 'attraction' | 'shopping' | 'other';
+  placeId?: string;
+  costEstimate?: number;
+  timeRange?: string;
 }
 
 export interface GeneratedItinerary {

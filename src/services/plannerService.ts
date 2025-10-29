@@ -60,13 +60,46 @@ export class PlannerService {
       throw err;
     }
     const llm = this.getLLMClient();
-    const result = await llm.generateItinerary(input);
-    const { valid } = validateItinerary(result);
-    if (!valid) {
-      const err: any = new Error('invalid itinerary generated');
-      err.code = 'BAD_GATEWAY';
-      throw err;
+    const MAX_RETRIES = 2;
+    const TIMEOUT_MS = 1000;
+
+    const callWithTimeout = <T>(p: Promise<T>, ms: number): Promise<T> => {
+      return new Promise<T>((resolve, reject) => {
+        const t = setTimeout(() => {
+          const err: any = new Error('planner generation timeout');
+          err.code = 'BAD_GATEWAY';
+          reject(err);
+        }, ms);
+        p.then((v) => {
+          clearTimeout(t);
+          resolve(v);
+        }).catch((e) => {
+          clearTimeout(t);
+          reject(e);
+        });
+      });
+    };
+
+    let lastError: any = null;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const result = await callWithTimeout(llm.generateItinerary(input), TIMEOUT_MS);
+        const { valid } = validateItinerary(result);
+        if (!valid) {
+          const err: any = new Error('invalid itinerary generated');
+          err.code = 'BAD_GATEWAY';
+          lastError = err;
+          continue; // retry
+        }
+        return result;
+      } catch (e: any) {
+        lastError = e;
+        // retry on timeout or transient errors
+        continue;
+      }
     }
-    return result;
+    const err: any = new Error('planner generation failed after retries');
+    err.code = lastError?.code || 'BAD_GATEWAY';
+    throw err;
   }
 }
