@@ -19,20 +19,23 @@ export function createSpeechRouter(): express.Router {
       if (!file) {
         return res.status(400).json({ code: 'BAD_REQUEST', message: 'audio file is required' });
       }
+      
+      // Expanded support for various audio formats with auto-conversion
       const allowed = ['audio/wav', 'audio/x-wav', 'audio/wave', 'audio/webm', 'audio/mpeg', 'audio/mp3', 'audio/ogg'];
       if (file.mimetype && !allowed.includes(file.mimetype)) {
         return res.status(400).json({ code: 'BAD_REQUEST', message: `unsupported audio type: ${file.mimetype}` });
       }
-      const isWav = ['audio/wav', 'audio/x-wav', 'audio/wave'].includes(file.mimetype || '');
-      if (!isWav) {
-        return res.status(400).json({ code: 'BAD_REQUEST', message: '当前后端使用科大讯飞听写接口，需要 WAV（16k PCM 单声道）。请上传 WAV；后续将增加自动转码以支持 webm/mp3/ogg。' });
-      }
+      
       const cfg = settings.getSettings();
       const svc = new SpeechService({ xfApiKey: cfg.XF_API_KEY, xfApiSecret: cfg.XF_API_SECRET, xfAppId: cfg.XF_APP_ID });
-      const result = await svc.recognize(file.buffer, language);
+      
+      // Use auto-convert method that handles all audio formats
+      const result = await svc.recognizeWithAutoConvert(file.buffer, file.mimetype || 'audio/wav', language);
       return res.status(200).json({ data: result });
     } catch (err: any) {
-      return res.status(500).json({ code: 'SERVER_ERROR', message: 'speech recognition failed' });
+      console.error('Speech recognition error:', err);
+      const message = err.message || 'speech recognition failed';
+      return res.status(500).json({ code: 'SERVER_ERROR', message });
     }
   });
 

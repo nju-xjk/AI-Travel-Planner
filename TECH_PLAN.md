@@ -20,31 +20,34 @@
   - 上传字段：`audio`（单文件），`language`（可选，默认 `zh-CN`）；
   - 大小限制：10MB；
   - MIME 白名单：`audio/wav`, `audio/x-wav`, `audio/wave`, `audio/webm`, `audio/mpeg`, `audio/mp3`, `audio/ogg`。
-  - 调用服务：`SpeechService.recognize(Buffer, language)` 返回 `{ text, confidence }`。
+  - 调用服务：`SpeechService.recognizeWithAutoConvert(Buffer, mimeType, language)` 返回 `{ text, confidence }`。
 - 服务：`src/services/speechService.ts`
   - 使用 `SettingsService` 读取配置：`XF_API_KEY`, `XF_API_SECRET`, `XF_APP_ID`；
   - 集成科大讯飞听写（IAT，WebSocket）：后端通过 HMAC 计算鉴权并推送音频（要求 PCM/WAV 16k 单声道），返回识别文本与置信度；
-  - 暂不做转码：当前仅接受 `audio/wav`，对 `webm/mp3/ogg` 返回提示（后续可集成 `ffmpeg` 做自动转码）。
+  - **音频自动转码**：使用 `fluent-ffmpeg` 将各种音频格式（`webm/mp3/ogg/wav`）自动转换为 WAV PCM 16k mono 格式，确保与科大讯飞 IAT 兼容。
 
 ## 配置与密钥
 - 设置页：`/settings`（`src/frontend/pages/Settings.tsx`）支持输入并保存：
   - `XF_API_KEY`（科大讯飞 API Key）
+  - `XF_API_SECRET`（科大讯飞 API Secret）
   - `XF_APP_ID`（科大讯飞 AppID）
   - 其他可选键（如 `LLM_API_KEY`, `AMAP_API_KEY`）。
 - 存储位置：`config/local.json`，通过 `SettingsService` 读写；不在仓库保存任何密钥。
 
 ## 兼容性与限制
-- 录音格式：默认 `audio/webm`（Opus 编码）；当前 iFLYTEK IAT 需要 PCM/WAV（16k 单声道原始帧）。短期通过“上传 WAV”使用，后续在后端增加自动转码（`ffmpeg`）。
+- 录音格式：默认 `audio/webm`（Opus 编码）；后端已集成 `fluent-ffmpeg` 自动转码，将所有音频格式转换为 iFLYTEK IAT 要求的 PCM/WAV（16k 单声道原始帧）。
 - 文件大小：后台限制为 10MB；较长录音建议前端限时或分段上传。
+- 转码依赖：需要系统安装 FFmpeg 可执行文件，用于音频格式转换。
 
 ## 流程概述
-1. 用户在 `PlanNew` 页面点击“开始录音”后发言，或上传本地音频；
-2. 录音生成 `audio/webm` 文件；点击“识别当前音频”后上传至后端（若为 WAV 则走 iFLYTEK 识别；非 WAV 当前提示需要转码或上传 WAV）。
-3. 后端返回识别文本与可选置信度；
-4. 用户选择“一键填充到目的地”或“追加到偏好”，再提交生成行程；
+1. 用户在 `PlanNew` 页面点击"开始录音"后发言，或上传本地音频；
+2. 录音生成 `audio/webm` 文件；点击"识别当前音频"后上传至后端；
+3. 后端自动检测音频格式，使用 `fluent-ffmpeg` 将音频转换为 WAV PCM 16k mono 格式，然后调用科大讯飞 IAT 进行识别；
+4. 后端返回识别文本与可选置信度；
+5. 用户选择"一键填充到目的地"或"追加到偏好"，再提交生成行程；
 
 ## 后续优化建议
 - 接入科大讯飞正式识别 API（REST 或 SDK），并根据 `language` 做参数映射与编码兼容；
-- 增加录音转码到 WAV/PCM 的后端流程；
 - 增强 UI：波形、录音倒计时、错误与重试提示；
 - 自动将识别内容结构化（目的地、日期、天数、偏好）并填充对应字段；
+- 优化转码性能：考虑缓存转码结果或使用流式转码减少内存占用；
