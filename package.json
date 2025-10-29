@@ -26,7 +26,8 @@
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.4",
     "supertest": "^7.1.4",
-    "zod": "^4.1.12"
+    "zod": "^4.1.12",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

@@ -22,9 +22,6 @@ export default function PlanNew() {
   const [speechText, setSpeechText] = useState<string>('');
   const [speechConfidence, setSpeechConfidence] = useState<number | null>(null);
   const [speechMsg, setSpeechMsg] = useState<string>('');
-  const [liveRecognizing, setLiveRecognizing] = useState(false);
-  const SpeechRecognitionCtor: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null;
-  const srRef = React.useRef<any>(null);
   const [recording, setRecording] = useState(false);
   const recorderRef = React.useRef<MediaRecorder | null>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
@@ -36,7 +33,8 @@ export default function PlanNew() {
   const analyserRef = React.useRef<AnalyserNode | null>(null);
   const volTimerRef = React.useRef<number | null>(null);
   const [volume, setVolume] = useState(0);
-  const MAX_RECORD_SEC = 15;
+  const MAX_RECORD_SEC = 120;
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
   React.useEffect(() => {
     (async () => {
@@ -114,6 +112,10 @@ export default function PlanNew() {
         const blob = new Blob(chunksRef.current, { type: mimeType });
         const file = new File([blob], `recording.${mimeType.includes('webm') ? 'webm' : 'mp3'}`, { type: mimeType });
         setAudioFile(file);
+        try {
+          if (audioUrl) URL.revokeObjectURL(audioUrl);
+          setAudioUrl(URL.createObjectURL(file));
+        } catch {}
         // stop tracks
         stream.getTracks().forEach(t => t.stop());
         streamRef.current = null;
@@ -157,48 +159,6 @@ export default function PlanNew() {
     }
   };
 
-  const startLiveASR = () => {
-    if (!SpeechRecognitionCtor) {
-      setSpeechMsg('当前浏览器不支持实时语音识别（Web Speech API）');
-      return;
-    }
-    try {
-      setSpeechMsg('');
-      setSpeechText('');
-      setSpeechConfidence(null);
-      const rec = new SpeechRecognitionCtor();
-      srRef.current = rec;
-      rec.lang = language || 'zh-CN';
-      rec.interimResults = true;
-      rec.continuous = false;
-      rec.onresult = (evt: any) => {
-        let text = '';
-        for (let i = evt.resultIndex; i < evt.results.length; i++) {
-          text += evt.results[i][0].transcript;
-        }
-        setSpeechText(text);
-      };
-      rec.onerror = (evt: any) => {
-        setSpeechMsg(`实时识别错误：${evt.error || '未知'}`);
-      };
-      rec.onend = () => {
-        setLiveRecognizing(false);
-      };
-      rec.start();
-      setLiveRecognizing(true);
-    } catch (err: any) {
-      setSpeechMsg(`无法开始实时识别：${err.message || '未知错误'}`);
-    }
-  };
-
-  const stopLiveASR = () => {
-    try {
-      const rec = srRef.current;
-      if (rec) rec.stop();
-    } catch {}
-    setLiveRecognizing(false);
-  };
-
   return (
     <div className="container" style={{ maxWidth: 980 }}>
       <div className="grid two">
@@ -227,29 +187,37 @@ export default function PlanNew() {
           </form>
         </Card>
 
-        <Card title="语音识别（实时或录音/上传）">
+        <Card title="语音识别（录音/上传）">
           <div className="stack">
-            <div className="row" style={{ alignItems: 'center', gap: 12 }}>
-              <Button type="button" onClick={liveRecognizing ? stopLiveASR : startLiveASR}>
-                {liveRecognizing ? '停止实时识别' : '开始实时识别'}{!SpeechRecognitionCtor && '（不支持）'}
-              </Button>
-              <span className="note" style={{ minWidth: 140 }}>{liveRecognizing ? '识别中…' : '已就绪'}</span>
-              {!SpeechRecognitionCtor && (
-                <span className="note">提示：Chrome/Edge 支持 Web Speech，Firefox 暂不支持</span>
-              )}
-            </div>
-            <div className="row" style={{ alignItems: 'center', gap: 12 }}>
-              <Button type="button" onClick={recording ? stopRecording : startRecording}>
-                {recording ? '停止录音' : '开始录音'}
-              </Button>
-              <span className="note" style={{ minWidth: 140 }}>
-                {recording ? `录音中… ${Math.floor(recordMs / 1000)}s` : (audioFile ? `就绪：${audioFile.name}` : '未选择音频')}
-              </span>
-              <div style={{ width: 80, height: 8, background: '#222', borderRadius: 4, overflow: 'hidden' }}>
-                <div style={{ width: `${Math.round(volume * 100)}%`, height: '100%', background: recording ? '#4caf50' : '#555' }} />
+            <div className="stack" style={{ gap: 8 }}>
+              <div className="row" style={{ alignItems: 'center', gap: 12 }}>
+                <Button type="button" variant="primary" onClick={recording ? stopRecording : startRecording}>
+                  {recording ? '停止录音' : '开始录音'}
+                </Button>
+                <span className="note" style={{ minWidth: 160 }}>
+                  {recording ? `录音中… ${Math.floor(recordMs / 1000)}s / ${MAX_RECORD_SEC}s` : (audioFile ? `已生成：${audioFile.name}` : '尚未生成音频')}
+                </span>
+                <div style={{ width: 120, height: 8, background: '#1b2545', borderRadius: 4, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <div style={{ width: `${Math.min(100, Math.round((recordMs / 1000) / MAX_RECORD_SEC * 100))}%`, height: '100%', background: '#4caf50' }} />
+                </div>
+                <div style={{ width: 80, height: 8, background: '#222', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.round(volume * 100)}%`, height: '100%', background: recording ? '#4caf50' : '#555' }} />
+                </div>
               </div>
-              <span className="label" style={{ marginLeft: 12 }}>或上传文件</span>
-              <input type="file" accept="audio/*" onChange={e => setAudioFile(e.target.files?.[0] ?? null)} />
+              <div className="row" style={{ alignItems: 'center', gap: 12 }}>
+                <span className="label">或上传文件</span>
+                <input type="file" accept="audio/*" onChange={e => {
+                  const f = e.target.files?.[0] ?? null;
+                  setAudioFile(f);
+                  try {
+                    if (audioUrl) URL.revokeObjectURL(audioUrl);
+                    setAudioUrl(f ? URL.createObjectURL(f) : null);
+                  } catch {}
+                }} />
+                {audioUrl && (
+                  <audio controls src={audioUrl} style={{ maxWidth: 260 }} />
+                )}
+              </div>
             </div>
             <div className="row" style={{ alignItems: 'center', gap: 12 }}>
               <div className="label">语言</div>

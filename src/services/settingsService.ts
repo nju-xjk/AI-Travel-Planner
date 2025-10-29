@@ -7,6 +7,7 @@ export interface Settings {
   LLM_API_KEY?: string;
   AMAP_API_KEY?: string;
   XF_API_KEY?: string;
+  XF_API_SECRET?: string;
   XF_APP_ID?: string;
   LLM_TIMEOUT_MS?: number;
   LLM_MAX_RETRIES?: number;
@@ -45,7 +46,7 @@ export class SettingsService {
 
   validate(payload: any, current?: Settings): { valid: boolean; message?: string } {
     const allowedKeys = [
-      'llmProvider', 'llmEnabled', 'LLM_API_KEY', 'AMAP_API_KEY', 'XF_API_KEY', 'XF_APP_ID', 'LLM_TIMEOUT_MS', 'LLM_MAX_RETRIES',
+      'llmProvider', 'llmEnabled', 'LLM_API_KEY', 'AMAP_API_KEY', 'XF_API_KEY', 'XF_API_SECRET', 'XF_APP_ID', 'LLM_TIMEOUT_MS', 'LLM_MAX_RETRIES',
       'BUDGET_COEFF_TRANSPORT', 'BUDGET_COEFF_FOOD', 'BUDGET_COEFF_ENTERTAINMENT', 'BUDGET_COEFF_ACCOMMODATION', 'BUDGET_COEFF_SHOPPING', 'BUDGET_COEFF_OTHER',
       'BUDGET_PERDAY_TRANSPORT', 'BUDGET_PERDAY_FOOD', 'BUDGET_PERDAY_ENTERTAINMENT', 'BUDGET_PERDAY_ACCOMMODATION'
     ];
