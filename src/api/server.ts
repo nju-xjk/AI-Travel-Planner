@@ -20,6 +20,25 @@ export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }
     res.status(200).json({ status: 'ok' });
   });
 
+  // API index for root path
+  app.get('/', (_req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      message: 'AI Travel Planner API',
+      endpoints: [
+        { method: 'GET', path: '/health' },
+        { method: 'POST', path: '/auth/register' },
+        { method: 'POST', path: '/auth/login' },
+        { method: 'POST', path: '/auth/logout' },
+        { method: 'POST', path: '/planner/suggest' },
+        { method: 'POST', path: '/budget/estimate' },
+        { method: 'POST', path: '/expenses' },
+        { method: 'GET', path: '/expenses' },
+        { method: 'GET', path: '/expenses/stats' }
+      ]
+    });
+  });
+
   app.use('/auth', createAuthRouter(db, { jwtSecret: opts.jwtSecret }));
   app.use('/planner', createPlannerRouter(db));
   app.use('/budget', createBudgetRouter(db));
