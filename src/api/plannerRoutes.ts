@@ -15,6 +15,9 @@ export function createPlannerRouter(_db: DB): express.Router {
       if (err?.code === 'BAD_REQUEST') {
         return res.status(400).json({ code: 'BAD_REQUEST', message: err.message || 'invalid request' });
       }
+      if (err?.code === 'BAD_GATEWAY') {
+        return res.status(502).json({ code: 'BAD_GATEWAY', message: err.message || 'upstream invalid response' });
+      }
       return res.status(500).json({ code: 'SERVER_ERROR', message: 'unexpected error' });
     }
   });

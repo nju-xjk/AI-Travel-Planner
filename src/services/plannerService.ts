@@ -1,6 +1,7 @@
 import { SettingsService } from './settingsService';
 import { LLMClient, GenerateItineraryInput, GeneratedItinerary } from './llm/LLMClient';
 import { MockLLMClient } from './llm/mockLLMClient';
+import { validateItinerary } from '../schemas/itinerary';
 
 function calculateDaysCount(start: string, end: string): number {
   const s = new Date(start + 'T00:00:00Z');
@@ -42,6 +43,12 @@ export class PlannerService {
     }
     const llm = this.getLLMClient();
     const result = await llm.generateItinerary(input);
+    const { valid } = validateItinerary(result);
+    if (!valid) {
+      const err: any = new Error('invalid itinerary generated');
+      err.code = 'BAD_GATEWAY';
+      throw err;
+    }
     return result;
   }
 }
