@@ -49,6 +49,7 @@ export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }
         { method: 'POST', path: '/auth/login' },
         { method: 'POST', path: '/auth/logout' },
         { method: 'POST', path: '/planner/suggest' },
+        { method: 'POST', path: '/planner/generate' },
         { method: 'POST', path: '/budget/estimate' },
         { method: 'POST', path: '/expenses' },
         { method: 'GET', path: '/expenses' },
