@@ -7,7 +7,7 @@
 ## 前端设计
 - 页面：`src/frontend/pages/PlanNew.tsx`
   - 录音：`MediaRecorder` 采集麦克风音频，默认 `audio/webm`（兼容 `audio/mpeg` 作为回退）；
-    - 录音时长上限：`MAX_RECORD_SEC = 120`（自动停止）；
+    - 录音时长上限：`MAX_RECORD_SEC = 60`（自动停止，符合科大讯飞1分钟限制）；
     - 音量提示：`AudioContext + AnalyserNode` 计算 RMS，提供简易音量条反馈；
   - 上传：文件输入 `accept="audio/*"`，支持多种音频类型；
   - 识别结果处理：

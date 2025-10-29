@@ -33,7 +33,7 @@ export default function PlanNew() {
   const analyserRef = React.useRef<AnalyserNode | null>(null);
   const volTimerRef = React.useRef<number | null>(null);
   const [volume, setVolume] = useState(0);
-  const MAX_RECORD_SEC = 120;
+  const MAX_RECORD_SEC = 60;
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
   React.useEffect(() => {

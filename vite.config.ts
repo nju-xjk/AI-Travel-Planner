@@ -13,6 +13,7 @@ export default defineConfig({
       '/settings': 'http://localhost:3000',
       '/metrics': 'http://localhost:3000',
       '/health': 'http://localhost:3000',
+      '/speech': 'http://localhost:3000',
     },
   },
 });

@@ -15,7 +15,29 @@ export interface SpeechServiceOptions {
 }
 
 export class SpeechService {
-  constructor(private opts: SpeechServiceOptions = {}) {}
+  constructor(private opts: SpeechServiceOptions = {}) {
+    // Configure ffmpeg executable path
+    // Priority: env FFMPEG_PATH > ffmpeg-static package > system PATH
+    try {
+      const ffPath = process.env.FFMPEG_PATH;
+      if (ffPath && typeof ffPath === 'string' && ffPath.trim()) {
+        (ffmpeg as any).setFfmpegPath(ffPath.trim());
+        console.log('[SpeechService] Using ffmpeg from FFMPEG_PATH:', ffPath.trim());
+      } else {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const ffmpegStatic = require('ffmpeg-static');
+          if (ffmpegStatic) {
+            (ffmpeg as any).setFfmpegPath(ffmpegStatic);
+            console.log('[SpeechService] Using ffmpeg from ffmpeg-static:', ffmpegStatic);
+          }
+        } catch (e) {
+          // ffmpeg-static not installed; rely on system PATH
+          console.warn('[SpeechService] ffmpeg-static not available, relying on system PATH.');
+        }
+      }
+    } catch {}
+  }
 
   /**
    * Convert audio to WAV PCM 16k mono format for iFLYTEK IAT
@@ -178,10 +200,7 @@ export class SpeechService {
               domain: 'iat',
               accent: lang === 'zh_cn' ? 'mandarin' : undefined,
               vad_eos: 1600,
-              dwa: 'wpgs',
-              // audio format: raw PCM 16k mono
-              auf: 'audio/L16;rate=16000',
-              aue: 'raw'
+              dwa: 'wpgs'
             },
             data: {
               status: 0,
