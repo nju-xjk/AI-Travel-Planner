@@ -2,6 +2,9 @@ import express from 'express';
 import { correlationId } from './middlewares/correlationId';
 import { createRequestLogger } from './middlewares/requestLogger';
 import { loadConfig } from '../config';
+import { metricsMiddleware, createMetricsRouter } from '../observability/metrics';
+import { createSettingsRouter } from './settingsRoutes';
+import { createLogger } from '../observability/logger';
 import { openDatabase, initSchema } from '../data/db';
 import { createAuthRouter } from './authRoutes';
 import { createPlannerRouter } from './plannerRoutes';
@@ -20,10 +23,13 @@ export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }
   const logLevel = (process.env.LOG_LEVEL || (env === 'development' ? 'debug' : 'info')) as any;
   const requestLogEnv = process.env.REQUEST_LOG;
   const requestLog = typeof requestLogEnv === 'string' ? requestLogEnv.toLowerCase() !== 'false' : env !== 'test';
+  const logger = createLogger(logLevel);
   if (requestLog) {
     app.use(correlationId());
     app.use(createRequestLogger(logLevel));
   }
+  // metrics middleware
+  app.use(metricsMiddleware());
 
   const db = opts.db ?? openDatabase({ memory: process.env.NODE_ENV === 'test' });
   initSchema(db);
@@ -55,6 +61,8 @@ export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }
   app.use('/planner', createPlannerRouter(db));
   app.use('/budget', createBudgetRouter(db));
   app.use('/expenses', createExpenseRouter(db, { jwtSecret: opts.jwtSecret }));
+  app.use('/settings', createSettingsRouter());
+  app.use('/metrics', createMetricsRouter());
 
   // 404 handler
   app.use((_req, res) => {
@@ -62,10 +70,13 @@ export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }
   });
 
   // error handler
-  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     // fall back to generic error structure
     const code = err?.code || 'SERVER_ERROR';
     const message = err?.message || 'unexpected error';
+    try {
+      logger.error('error', { code, message, id: (req as any).id });
+    } catch {}
     res.status(500).json({ code, message });
   });
 

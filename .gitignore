@@ -2,6 +2,8 @@ node_modules/
 dist/
 data/
 logs/
+.vscode/
+config/local.json
 .env
 npm-debug.log*
 coverage/
