@@ -16,9 +16,10 @@ export default function Register() {
     e.preventDefault();
     setMsg('');
     setLoading(true);
+    const emailNorm = email.trim().toLowerCase();
     const res = await api<{ id: number; email: string; created_at: string }>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email: emailNorm, password })
     });
     setLoading(false);
     if (res?.data?.id) {

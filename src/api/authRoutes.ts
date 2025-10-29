@@ -16,7 +16,8 @@ export function createAuthRouter(db: DB, options: CreateAuthRouterOptions): expr
       return res.status(400).json({ code: 'BAD_REQUEST', message: 'email and password are required' });
     }
     try {
-      const user = await auth.register(email, password);
+      const normEmail = String(email).trim().toLowerCase();
+      const user = await auth.register(normEmail, password);
       return res.status(201).json({ data: user });
     } catch (err: any) {
       if (err && err.message === 'EMAIL_EXISTS') {
@@ -32,7 +33,8 @@ export function createAuthRouter(db: DB, options: CreateAuthRouterOptions): expr
       return res.status(400).json({ code: 'BAD_REQUEST', message: 'email and password are required' });
     }
     try {
-      const { token } = await auth.login(email, password);
+      const normEmail = String(email).trim().toLowerCase();
+      const { token } = await auth.login(normEmail, password);
       return res.status(200).json({ data: { token } });
     } catch (err: any) {
       if (err && err.message === 'INVALID_CREDENTIALS') {

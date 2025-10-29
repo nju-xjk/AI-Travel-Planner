@@ -16,9 +16,10 @@ export default function Login() {
     e.preventDefault();
     setMsg('');
     setLoading(true);
+    const emailNorm = email.trim().toLowerCase();
     const res = await api<{ token: string }>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email: emailNorm, password })
     });
     setLoading(false);
     if (res?.data?.token) {
