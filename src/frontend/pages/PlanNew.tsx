@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { api } from '../api';
+import Card from '../components/Card';
+import Input from '../components/Input';
+import Button from '../components/Button';
 
 type Itinerary = { destination: string; start_date: string; end_date: string; days: any[] };
 
@@ -10,17 +13,20 @@ export default function PlanNew() {
   const [result, setResult] = useState<any>(null);
   const [budget, setBudget] = useState<any>(null);
   const [msg, setMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const onGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     setMsg('');
     setResult(null);
     setBudget(null);
+    setLoading(true);
     const gen = await api<Itinerary>('/planner/generate', {
       method: 'POST',
       body: JSON.stringify({ destination, start_date, end_date })
     });
     if (!gen.data) {
+      setLoading(false);
       setMsg(gen.message || '生成失败');
       return;
     }
@@ -29,30 +35,42 @@ export default function PlanNew() {
       method: 'POST',
       body: JSON.stringify({ destination, start_date, end_date, party_size: 2, itinerary: gen.data })
     });
+    setLoading(false);
     if (est.data) setBudget(est.data);
   };
 
   return (
-    <div>
-      <h2>新建行程</h2>
-      <form onSubmit={onGenerate} style={{ display: 'grid', gap: 8, maxWidth: 480 }}>
-        <input placeholder="目的地" value={destination} onChange={e => setDestination(e.target.value)} />
-        <input placeholder="开始日期" value={start_date} onChange={e => setStart(e.target.value)} />
-        <input placeholder="结束日期" value={end_date} onChange={e => setEnd(e.target.value)} />
-        <button type="submit">生成行程并估算预算</button>
-        {msg && <div>{msg}</div>}
-      </form>
-      {result && (
-        <div style={{ marginTop: 16 }}>
-          <h3>行程</h3>
-          <pre style={{ background: '#f6f8fa', padding: 12 }}>{JSON.stringify(result, null, 2)}</pre>
-        </div>
-      )}
+    <div className="container" style={{ maxWidth: 980 }}>
+      <div className="grid two">
+        <Card title="新建行程">
+          <form onSubmit={onGenerate} className="stack">
+            <Input label="目的地" placeholder="目的地" value={destination} onChange={e => setDestination(e.target.value)} />
+            <div className="grid two">
+              <Input label="开始日期" placeholder="YYYY-MM-DD" value={start_date} onChange={e => setStart(e.target.value)} />
+              <Input label="结束日期" placeholder="YYYY-MM-DD" value={end_date} onChange={e => setEnd(e.target.value)} />
+            </div>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <Button type="submit" variant="primary" disabled={loading}>{loading ? '生成中...' : '生成行程并估算预算'}</Button>
+              {msg && <span className="note">{msg}</span>}
+            </div>
+            <div className="note">生成后将自动调用预算估算。</div>
+          </form>
+        </Card>
+
+        {result && (
+          <Card title="行程">
+            <div className="kpi">📍 {result.destination} · 🗓️ {result.start_date} → {result.end_date}</div>
+            <div className="spacer" />
+            <pre style={{ background: '#0a1020', padding: 12, borderRadius: 12, border: '1px solid var(--border)', overflow: 'auto' }}>{JSON.stringify(result, null, 2)}</pre>
+          </Card>
+        )}
+      </div>
+
       {budget && (
-        <div style={{ marginTop: 16 }}>
-          <h3>预算估算</h3>
-          <pre style={{ background: '#f6f8fa', padding: 12 }}>{JSON.stringify(budget, null, 2)}</pre>
-        </div>
+        <div className="spacer" />
+        <Card title="预算估算">
+          <pre style={{ background: '#0a1020', padding: 12, borderRadius: 12, border: '1px solid var(--border)', overflow: 'auto' }}>{JSON.stringify(budget, null, 2)}</pre>
+        </Card>
       )}
     </div>
   );
