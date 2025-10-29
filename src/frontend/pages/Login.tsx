@@ -4,6 +4,7 @@ import Card from '../components/Card';
 import Input from '../components/Input';
 import Button from '../components/Button';
 import { useNavigate } from 'react-router-dom';
+import { isAuthenticated } from '../auth';
 
 export default function Login() {
   const [email, setEmail] = useState('test@example.com');
@@ -11,6 +12,13 @@ export default function Login() {
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    // 已登录时自动跳转到新建行程
+    if (isAuthenticated()) {
+      navigate('/plan/new', { replace: true });
+    }
+  }, [navigate]);
 
   const onLogin = async (e: React.FormEvent) => {
     e.preventDefault();
