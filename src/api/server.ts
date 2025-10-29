@@ -3,16 +3,17 @@ import { openDatabase, initSchema } from '../data/db';
 import { createAuthRouter } from './authRoutes';
 import { createPlannerRouter } from './plannerRoutes';
 import { createBudgetRouter } from './budgetRoutes';
+import { createExpenseRouter } from './expenseRoutes';
 
 export interface ServerOptions {
   jwtSecret: string;
 }
 
-export function createApp(opts: ServerOptions) {
+export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }) {
   const app = express();
   app.use(express.json());
 
-  const db = openDatabase({ memory: process.env.NODE_ENV === 'test' });
+  const db = opts.db ?? openDatabase({ memory: process.env.NODE_ENV === 'test' });
   initSchema(db);
 
   app.get('/health', (_req, res) => {
@@ -22,6 +23,7 @@ export function createApp(opts: ServerOptions) {
   app.use('/auth', createAuthRouter(db, { jwtSecret: opts.jwtSecret }));
   app.use('/planner', createPlannerRouter(db));
   app.use('/budget', createBudgetRouter(db));
+  app.use('/expenses', createExpenseRouter(db, { jwtSecret: opts.jwtSecret }));
 
   // 404 handler
   app.use((_req, res) => {
