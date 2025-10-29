@@ -5,6 +5,7 @@ import { loadConfig } from '../config';
 import { metricsMiddleware, createMetricsRouter } from '../observability/metrics';
 import { createSettingsRouter } from './settingsRoutes';
 import { createLogger } from '../observability/logger';
+import { createErrorHandler } from './middlewares/errorHandler';
 import { openDatabase, initSchema } from '../data/db';
 import { createAuthRouter } from './authRoutes';
 import { createPlannerRouter } from './plannerRoutes';
@@ -35,6 +36,7 @@ export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }
   initSchema(db);
 
   app.get('/health', (_req, res) => {
+    try { logger.info('healthcheck'); } catch {}
     res.status(200).json({ status: 'ok' });
   });
 
@@ -70,16 +72,8 @@ export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }
     res.status(404).json({ code: 'NOT_FOUND', message: 'route not found' });
   });
 
-  // error handler
-  app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    // fall back to generic error structure
-    const code = err?.code || 'SERVER_ERROR';
-    const message = err?.message || 'unexpected error';
-    try {
-      logger.error('error', { code, message, id: (req as any).id });
-    } catch {}
-    res.status(500).json({ code, message });
-  });
+  // unified error handler
+  app.use(createErrorHandler(logger));
 
   return app;
 }

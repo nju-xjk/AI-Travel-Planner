@@ -8,6 +8,8 @@ export interface Settings {
   AMAP_API_KEY?: string;
   XF_API_KEY?: string;
   XF_APP_ID?: string;
+  LLM_TIMEOUT_MS?: number;
+  LLM_MAX_RETRIES?: number;
 }
 
 const CONFIG_DIR = path.resolve(process.cwd(), 'config');
@@ -32,7 +34,7 @@ export class SettingsService {
   }
 
   validate(payload: any, current?: Settings): { valid: boolean; message?: string } {
-    const allowedKeys = ['llmProvider', 'llmEnabled', 'LLM_API_KEY', 'AMAP_API_KEY', 'XF_API_KEY', 'XF_APP_ID'];
+    const allowedKeys = ['llmProvider', 'llmEnabled', 'LLM_API_KEY', 'AMAP_API_KEY', 'XF_API_KEY', 'XF_APP_ID', 'LLM_TIMEOUT_MS', 'LLM_MAX_RETRIES'];
     const keys = Object.keys(payload || {});
     for (const k of keys) {
       if (!allowedKeys.includes(k)) {
@@ -42,6 +44,22 @@ export class SettingsService {
       if (k === 'llmEnabled') {
         if (v != null && typeof v !== 'boolean') {
           return { valid: false, message: `key ${k} must be boolean` };
+        }
+      } else if (k === 'LLM_TIMEOUT_MS' || k === 'LLM_MAX_RETRIES') {
+        if (v != null && typeof v !== 'number') {
+          return { valid: false, message: `key ${k} must be number` };
+        }
+        if (k === 'LLM_TIMEOUT_MS') {
+          const ms = Number(v);
+          if (v != null && (!Number.isFinite(ms) || ms < 100 || ms > 60000)) {
+            return { valid: false, message: 'LLM_TIMEOUT_MS must be between 100 and 60000' };
+          }
+        }
+        if (k === 'LLM_MAX_RETRIES') {
+          const r = Number(v);
+          if (v != null && (!Number.isFinite(r) || r < 0 || r > 5)) {
+            return { valid: false, message: 'LLM_MAX_RETRIES must be between 0 and 5' };
+          }
         }
       } else {
         if (v != null && typeof v !== 'string') {

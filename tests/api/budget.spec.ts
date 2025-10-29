@@ -27,4 +27,18 @@ describe('Budget API (mock)', () => {
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('BAD_REQUEST');
   });
+
+  it('rejects invalid itinerary payload with 400', async () => {
+    const res = await request(app)
+      .post('/budget/estimate')
+      .send({
+        destination: 'Hangzhou',
+        start_date: '2025-03-01',
+        end_date: '2025-03-02',
+        party_size: 2,
+        itinerary: { days: [{ day_index: 1, segments: [{ type: 123 }] }] }
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('BAD_REQUEST');
+  });
 });

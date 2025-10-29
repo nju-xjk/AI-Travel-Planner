@@ -60,8 +60,9 @@ export class PlannerService {
       throw err;
     }
     const llm = this.getLLMClient();
-    const MAX_RETRIES = 2;
-    const TIMEOUT_MS = 1000;
+    const cfg = this.settings.getSettings();
+    const MAX_RETRIES = Number.isFinite(cfg.LLM_MAX_RETRIES as any) ? Number(cfg.LLM_MAX_RETRIES) : 2;
+    const TIMEOUT_MS = Number.isFinite(cfg.LLM_TIMEOUT_MS as any) ? Number(cfg.LLM_TIMEOUT_MS) : 1000;
 
     const callWithTimeout = <T>(p: Promise<T>, ms: number): Promise<T> => {
       return new Promise<T>((resolve, reject) => {

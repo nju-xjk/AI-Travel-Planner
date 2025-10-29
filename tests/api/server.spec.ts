@@ -28,4 +28,10 @@ describe('API Server', () => {
     expect(login.status).toBe(200);
     expect(typeof login.body?.data?.token).toBe('string');
   });
+
+  it('returns 404 for unknown route', async () => {
+    const res = await request(app).get('/no-such-route');
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe('NOT_FOUND');
+  });
 });
