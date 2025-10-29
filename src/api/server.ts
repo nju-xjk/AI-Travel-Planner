@@ -11,6 +11,7 @@ import { createAuthRouter } from './authRoutes';
 import { createPlannerRouter } from './plannerRoutes';
 import { createBudgetRouter } from './budgetRoutes';
 import { createExpenseRouter } from './expenseRoutes';
+import { createSpeechRouter } from './speechRoutes';
 
 export interface ServerOptions {
   jwtSecret: string;
@@ -55,7 +56,8 @@ export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }
         { method: 'POST', path: '/budget/estimate' },
         { method: 'POST', path: '/expenses' },
         { method: 'GET', path: '/expenses' },
-        { method: 'GET', path: '/expenses/stats' }
+        { method: 'GET', path: '/expenses/stats' },
+        { method: 'POST', path: '/speech/recognize' }
       ]
     });
   });
@@ -66,6 +68,7 @@ export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }
   app.use('/expenses', createExpenseRouter(db, { jwtSecret: opts.jwtSecret }));
   app.use('/settings', createSettingsRouter());
   app.use('/metrics', createMetricsRouter());
+  app.use('/speech', createSpeechRouter());
 
   // 404 handler
   app.use((_req, res) => {

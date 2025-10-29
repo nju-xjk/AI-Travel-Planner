@@ -40,6 +40,8 @@ export default function Settings() {
             </div>
             <Input label="LLM_API_KEY" placeholder="用于真实 LLM 提供商" value={settings.LLM_API_KEY || ''} onChange={e => onChange('LLM_API_KEY', e.target.value)} />
             <Input label="AMAP_API_KEY" placeholder="用于高德地图 JSAPI" value={settings.AMAP_API_KEY || ''} onChange={e => onChange('AMAP_API_KEY', e.target.value)} />
+            <Input label="XF_API_KEY" placeholder="用于科大讯飞语音识别" value={settings.XF_API_KEY || ''} onChange={e => onChange('XF_API_KEY', e.target.value)} />
+            <Input label="XF_APP_ID" placeholder="用于科大讯飞应用ID" value={settings.XF_APP_ID || ''} onChange={e => onChange('XF_APP_ID', e.target.value)} />
           </div>
         </Card>
 

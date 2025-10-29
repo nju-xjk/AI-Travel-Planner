@@ -16,6 +16,11 @@ export default function PlanNew() {
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [amapKey, setAmapKey] = useState<string | undefined>(undefined);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [language, setLanguage] = useState('zh-CN');
+  const [speechText, setSpeechText] = useState<string>('');
+  const [speechConfidence, setSpeechConfidence] = useState<number | null>(null);
+  const [speechMsg, setSpeechMsg] = useState<string>('');
 
   React.useEffect(() => {
     (async () => {
@@ -68,6 +73,60 @@ export default function PlanNew() {
             </div>
             <div className="note">生成后将自动调用预算估算。</div>
           </form>
+        </Card>
+
+        <Card title="语音识别（上传音频）">
+          <div className="stack">
+            <div className="row" style={{ alignItems: 'center', gap: 12 }}>
+              <div className="label">音频文件</div>
+              <input type="file" accept="audio/*" onChange={e => setAudioFile(e.target.files?.[0] ?? null)} />
+            </div>
+            <div className="row" style={{ alignItems: 'center', gap: 12 }}>
+              <div className="label">语言</div>
+              <select value={language} onChange={e => setLanguage(e.target.value)}>
+                <option value="zh-CN">中文（zh-CN）</option>
+                <option value="en-US">英语（en-US）</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <Button type="button" onClick={async () => {
+                setSpeechMsg('');
+                setSpeechText('');
+                setSpeechConfidence(null);
+                if (!audioFile) {
+                  setSpeechMsg('请先选择音频文件');
+                  return;
+                }
+                try {
+                  const form = new FormData();
+                  form.append('audio', audioFile);
+                  form.append('language', language);
+                  const token = localStorage.getItem('token');
+                  const res = await fetch('/speech/recognize', {
+                    method: 'POST',
+                    body: form,
+                    headers: token ? { Authorization: `Bearer ${token}` } : undefined
+                  });
+                  const json = await res.json();
+                  if (res.ok && json?.data) {
+                    setSpeechText(json.data.text || '');
+                    setSpeechConfidence(typeof json.data.confidence === 'number' ? json.data.confidence : null);
+                  } else {
+                    setSpeechMsg(json?.message || '识别失败');
+                  }
+                } catch (err: any) {
+                  setSpeechMsg('识别调用异常');
+                }
+              }}>上传并识别</Button>
+              {speechMsg && <span className="note">{speechMsg}</span>}
+            </div>
+            {(speechText || speechConfidence != null) && (
+              <div className="stack">
+                <div className="kpi">识别文本：{speechText || '(空)'}</div>
+                {speechConfidence != null && <div className="note">置信度：{Math.round(speechConfidence * 100)}%</div>}
+              </div>
+            )}
+          </div>
         </Card>
 
         {result && (
