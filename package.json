@@ -7,7 +7,8 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "echo 'no linter configured yet'"
+    "lint": "echo 'no linter configured yet'",
+    "start": "node dist/api/server.js"
   },
   "dependencies": {
     "@types/bcryptjs": "^3.0.0",
