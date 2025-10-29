@@ -5,6 +5,7 @@ import { OpenAILLMClient } from './llm/openaiClient';
 import { BailianLLMClient } from './llm/bailianClient';
 import { XunfeiLLMClient } from './llm/xunfeiClient';
 import { validateItinerary } from '../schemas/itinerary';
+import { metrics } from '../observability/metrics';
 
 function calculateDaysCount(start: string, end: string): number {
   const s = new Date(start + 'T00:00:00Z');
@@ -63,6 +64,7 @@ export class PlannerService {
     const cfg = this.settings.getSettings();
     const MAX_RETRIES = Number.isFinite(cfg.LLM_MAX_RETRIES as any) ? Number(cfg.LLM_MAX_RETRIES) : 2;
     const TIMEOUT_MS = Number.isFinite(cfg.LLM_TIMEOUT_MS as any) ? Number(cfg.LLM_TIMEOUT_MS) : 1000;
+    metrics.planner.total_generations += 1;
 
     const callWithTimeout = <T>(p: Promise<T>, ms: number): Promise<T> => {
       return new Promise<T>((resolve, reject) => {
@@ -90,17 +92,25 @@ export class PlannerService {
           const err: any = new Error('invalid itinerary generated');
           err.code = 'BAD_GATEWAY';
           lastError = err;
+          metrics.planner.invalid += 1;
+          if (attempt < MAX_RETRIES) metrics.planner.retries += 1;
           continue; // retry
         }
+        metrics.planner.success += 1;
         return result;
       } catch (e: any) {
         lastError = e;
+        if (e?.code === 'BAD_GATEWAY' && typeof e?.message === 'string' && e.message.includes('timeout')) {
+          metrics.planner.timeout += 1;
+        }
+        if (attempt < MAX_RETRIES) metrics.planner.retries += 1;
         // retry on timeout or transient errors
         continue;
       }
     }
     const err: any = new Error('planner generation failed after retries');
     err.code = lastError?.code || 'BAD_GATEWAY';
+    metrics.planner.failed += 1;
     throw err;
   }
 }

@@ -10,6 +10,16 @@ export interface Settings {
   XF_APP_ID?: string;
   LLM_TIMEOUT_MS?: number;
   LLM_MAX_RETRIES?: number;
+  BUDGET_COEFF_TRANSPORT?: number;
+  BUDGET_COEFF_FOOD?: number;
+  BUDGET_COEFF_ENTERTAINMENT?: number;
+  BUDGET_COEFF_ACCOMMODATION?: number;
+  BUDGET_COEFF_SHOPPING?: number;
+  BUDGET_COEFF_OTHER?: number;
+  BUDGET_PERDAY_TRANSPORT?: number;
+  BUDGET_PERDAY_FOOD?: number;
+  BUDGET_PERDAY_ENTERTAINMENT?: number;
+  BUDGET_PERDAY_ACCOMMODATION?: number;
 }
 
 const CONFIG_DIR = path.resolve(process.cwd(), 'config');
@@ -34,7 +44,11 @@ export class SettingsService {
   }
 
   validate(payload: any, current?: Settings): { valid: boolean; message?: string } {
-    const allowedKeys = ['llmProvider', 'llmEnabled', 'LLM_API_KEY', 'AMAP_API_KEY', 'XF_API_KEY', 'XF_APP_ID', 'LLM_TIMEOUT_MS', 'LLM_MAX_RETRIES'];
+    const allowedKeys = [
+      'llmProvider', 'llmEnabled', 'LLM_API_KEY', 'AMAP_API_KEY', 'XF_API_KEY', 'XF_APP_ID', 'LLM_TIMEOUT_MS', 'LLM_MAX_RETRIES',
+      'BUDGET_COEFF_TRANSPORT', 'BUDGET_COEFF_FOOD', 'BUDGET_COEFF_ENTERTAINMENT', 'BUDGET_COEFF_ACCOMMODATION', 'BUDGET_COEFF_SHOPPING', 'BUDGET_COEFF_OTHER',
+      'BUDGET_PERDAY_TRANSPORT', 'BUDGET_PERDAY_FOOD', 'BUDGET_PERDAY_ENTERTAINMENT', 'BUDGET_PERDAY_ACCOMMODATION'
+    ];
     const keys = Object.keys(payload || {});
     for (const k of keys) {
       if (!allowedKeys.includes(k)) {
@@ -45,7 +59,7 @@ export class SettingsService {
         if (v != null && typeof v !== 'boolean') {
           return { valid: false, message: `key ${k} must be boolean` };
         }
-      } else if (k === 'LLM_TIMEOUT_MS' || k === 'LLM_MAX_RETRIES') {
+      } else if (k === 'LLM_TIMEOUT_MS' || k === 'LLM_MAX_RETRIES' || k.startsWith('BUDGET_')) {
         if (v != null && typeof v !== 'number') {
           return { valid: false, message: `key ${k} must be number` };
         }
@@ -59,6 +73,18 @@ export class SettingsService {
           const r = Number(v);
           if (v != null && (!Number.isFinite(r) || r < 0 || r > 5)) {
             return { valid: false, message: 'LLM_MAX_RETRIES must be between 0 and 5' };
+          }
+        }
+        if (k.startsWith('BUDGET_COEFF_')) {
+          const n = Number(v);
+          if (v != null && (!Number.isFinite(n) || n < 0 || n > 10000)) {
+            return { valid: false, message: `${k} must be between 0 and 10000` };
+          }
+        }
+        if (k.startsWith('BUDGET_PERDAY_')) {
+          const n = Number(v);
+          if (v != null && (!Number.isFinite(n) || n < 0 || n > 5000)) {
+            return { valid: false, message: `${k} must be between 0 and 5000` };
           }
         }
       } else {

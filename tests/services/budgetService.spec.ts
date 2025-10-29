@@ -51,4 +51,18 @@ describe('BudgetService', () => {
     expect(estimate.breakdown.transport).toBe(80);
     expect(estimate.breakdown.accommodation).toBe(300);
   });
+
+  it('uses configurable coefficients from settings when costEstimate missing', () => {
+    const stubSettings: any = { getSettings: () => ({ BUDGET_COEFF_TRANSPORT: 200 }) };
+    const svcCfg = new BudgetService(stubSettings);
+    const estimate = svcCfg.estimateBudget({
+      destination: 'Nanjing',
+      start_date: '2025-02-10',
+      end_date: '2025-02-10',
+      party_size: 2,
+      itinerary: { days: [{ day_index: 1, segments: [{ type: 'transport' }] }] }
+    });
+    expect(estimate.breakdown.transport).toBe(200 * 2);
+    expect(estimate.total).toBe(estimate.breakdown.transport);
+  });
 });

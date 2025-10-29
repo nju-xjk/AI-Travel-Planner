@@ -28,7 +28,15 @@ function calculateDaysCount(start: string, end: string): number {
   return Number.isFinite(days) ? days : 0;
 }
 
+import { SettingsService } from './settingsService';
+
 export class BudgetService {
+  private settings: SettingsService;
+
+  constructor(settings?: SettingsService) {
+    this.settings = settings ?? new SettingsService();
+  }
+
   estimateBudget(input: EstimateBudgetInput): BudgetEstimate {
     const { destination, start_date, end_date } = input;
     const ps = Number(input.party_size);
@@ -61,15 +69,16 @@ export class BudgetService {
     };
 
     const itineraryDays = input.itinerary?.days ?? [];
+    const cfg = this.settings.getSettings();
     if (Array.isArray(itineraryDays) && itineraryDays.length > 0) {
       // Per-segment coefficients (CNY) used when costEstimate missing
       const perSegment = {
-        transport: 50,
-        food: 60,
-        entertainment: 80,
-        accommodation: 300, // treat each accommodation segment as a night
-        shopping: 0,
-        other: 0
+        transport: cfg.BUDGET_COEFF_TRANSPORT ?? 50,
+        food: cfg.BUDGET_COEFF_FOOD ?? 60,
+        entertainment: cfg.BUDGET_COEFF_ENTERTAINMENT ?? 80,
+        accommodation: cfg.BUDGET_COEFF_ACCOMMODATION ?? 300, // treat each accommodation segment as a night
+        shopping: cfg.BUDGET_COEFF_SHOPPING ?? 0,
+        other: cfg.BUDGET_COEFF_OTHER ?? 0,
       } as Record<string, number>;
 
       let missingType = false;
@@ -89,10 +98,10 @@ export class BudgetService {
     } else {
       // Base per-person per-day rules (CNY) fallback
       const perDay = {
-        accommodation: 300,
-        food: 120,
-        transport: 50,
-        entertainment: 80
+        accommodation: cfg.BUDGET_PERDAY_ACCOMMODATION ?? 300,
+        food: cfg.BUDGET_PERDAY_FOOD ?? 120,
+        transport: cfg.BUDGET_PERDAY_TRANSPORT ?? 50,
+        entertainment: cfg.BUDGET_PERDAY_ENTERTAINMENT ?? 80,
       };
       breakdown = {
         accommodation: perDay.accommodation * daysCount * ps,

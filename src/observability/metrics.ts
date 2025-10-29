@@ -4,12 +4,28 @@ export interface Metrics {
   total_requests: number;
   total_errors: number;
   routes: Record<string, { count: number; total_duration_ms: number }>;
+  planner: {
+    total_generations: number;
+    success: number;
+    timeout: number;
+    invalid: number;
+    failed: number;
+    retries: number;
+  };
 }
 
 export const metrics: Metrics = {
   total_requests: 0,
   total_errors: 0,
   routes: {},
+  planner: {
+    total_generations: 0,
+    success: 0,
+    timeout: 0,
+    invalid: 0,
+    failed: 0,
+    retries: 0,
+  },
 };
 
 export function metricsMiddleware(): express.RequestHandler {

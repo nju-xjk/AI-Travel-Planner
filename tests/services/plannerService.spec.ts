@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { PlannerService } from '../../src/services/plannerService';
 import type { LLMClient, GenerateItineraryInput, GeneratedItinerary } from '../../src/services/llm/LLMClient';
+import { metrics } from '../../src/observability/metrics';
 
 class FlakyLLM implements LLMClient {
   private calls = 0;
@@ -49,14 +50,21 @@ describe('PlannerService timeout & retry', () => {
     const svc = new PlannerService();
     // Monkey-patch private method for test injection
     (svc as any)['getLLMClient'] = () => new FlakyLLM();
+    const before = { ...metrics.planner };
     const res = await svc.suggestItinerary({ destination: 'Hangzhou', start_date: '2025-03-01', end_date: '2025-03-02' });
     expect(res.days.length).toBe(2);
     expect(res.days[0].segments.length).toBeGreaterThan(0);
+    const after = metrics.planner;
+    expect(after.total_generations).toBe(before.total_generations + 1);
+    expect(after.invalid).toBeGreaterThanOrEqual(before.invalid + 1);
+    expect(after.retries).toBeGreaterThanOrEqual(before.retries + 1);
+    expect(after.success).toBe(before.success + 1);
   });
 
   it('maps long-running generation to BAD_GATEWAY via timeout', async () => {
     const svc = new PlannerService();
     (svc as any)['getLLMClient'] = () => new TimeoutLLM();
+    const before = { ...metrics.planner };
     try {
       await svc.suggestItinerary({ destination: 'Suzhou', start_date: '2025-04-01', end_date: '2025-04-01' });
       throw new Error('Expected timeout error');
@@ -64,5 +72,9 @@ describe('PlannerService timeout & retry', () => {
       expect(e.code).toBe('BAD_GATEWAY');
       expect(String(e.message)).toMatch(/timeout|failed/i);
     }
+    const after = metrics.planner;
+    expect(after.total_generations).toBe(before.total_generations + 1);
+    expect(after.timeout).toBeGreaterThanOrEqual(before.timeout + 1);
+    expect(after.failed).toBeGreaterThanOrEqual(before.failed + 1);
   });
 });
