@@ -2,7 +2,7 @@ import type { DB } from '../data/db';
 import { initSchema } from '../data/db';
 import { UserDAO } from '../data/dao/userDao';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 
 export interface AuthServiceOptions {
   jwtSecret: string;
@@ -58,6 +58,12 @@ export class AuthService {
   }
 
   verifyToken(token: string): AuthTokenPayload {
-    return jwt.verify(token, this.jwtSecret) as AuthTokenPayload;
+    const decoded = jwt.verify(token, this.jwtSecret) as JwtPayload & { email?: string };
+    const subRaw = decoded.sub;
+    const subNum = typeof subRaw === 'string' ? Number(subRaw) : subRaw;
+    if (!subNum || typeof decoded.email !== 'string') {
+      throw new Error('INVALID_TOKEN');
+    }
+    return { sub: subNum, email: decoded.email };
   }
 }

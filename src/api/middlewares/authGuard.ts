@@ -1,5 +1,5 @@
 import express from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 
 export interface AuthedUser {
   id: number;
@@ -18,8 +18,13 @@ export function createAuthGuard(jwtSecret: string): express.RequestHandler {
     }
     const token = auth.slice('Bearer '.length);
     try {
-      const payload = jwt.verify(token, jwtSecret) as { sub: number; email: string };
-      req.user = { id: payload.sub, email: payload.email };
+      const decoded = jwt.verify(token, jwtSecret) as JwtPayload & { email?: string };
+      const subRaw = decoded.sub;
+      const subNum = typeof subRaw === 'string' ? Number(subRaw) : subRaw;
+      if (!subNum || typeof decoded.email !== 'string') {
+        return res.status(401).json({ code: 'UNAUTHORIZED', message: 'invalid token payload' });
+      }
+      req.user = { id: subNum, email: decoded.email };
       return next();
     } catch (_err) {
       return res.status(401).json({ code: 'UNAUTHORIZED', message: 'invalid token' });
