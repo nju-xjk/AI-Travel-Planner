@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import PlanNew from './pages/PlanNew';
 import PlanShow from './pages/PlanShow';
 import Settings from './pages/Settings';
@@ -15,6 +16,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/plan/new" replace />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/plan/new" element={<PlanNew />} />
           <Route path="/plan/:id" element={<PlanShow />} />
           <Route path="/expenses" element={<Expenses />} />

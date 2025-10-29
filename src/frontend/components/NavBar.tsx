@@ -10,6 +10,7 @@ export default function NavBar() {
           <div>AI Travel Planner</div>
         </div>
         <nav className="nav">
+          <NavLink to="/register" className={({ isActive }) => isActive ? 'active' : ''}>注册</NavLink>
           <NavLink to="/login" className={({ isActive }) => isActive ? 'active' : ''}>登录</NavLink>
           <NavLink to="/plan/new" className={({ isActive }) => isActive ? 'active' : ''}>新建行程</NavLink>
           <NavLink to="/expenses" className={({ isActive }) => isActive ? 'active' : ''}>费用</NavLink>
