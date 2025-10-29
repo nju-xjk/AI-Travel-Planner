@@ -1,59 +1,45 @@
-export interface ItineraryDay {
-  day_index: number;
-  segments: Array<{
-    title: string;
-    startTime?: string;
-    endTime?: string;
-    location?: string;
-    notes?: string;
-  }>;
-}
+import { z } from 'zod';
 
-export interface Itinerary {
-  destination: string;
-  start_date: string;
-  end_date: string;
-  days: ItineraryDay[];
-}
+export const DaySegmentSchema = z.object({
+  title: z.string().min(1),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  location: z.string().min(1).optional(),
+  notes: z.string().min(1).optional()
+});
 
-export function validateItinerary(it: any): { valid: boolean; errors?: string[] } {
-  const errors: string[] = [];
-  if (!it || typeof it !== 'object') {
-    return { valid: false, errors: ['itinerary must be object'] };
+export const ItineraryDaySchema = z.object({
+  day_index: z.number().int().positive(),
+  segments: z.array(DaySegmentSchema).min(1)
+});
+
+export const ItinerarySchema = z.object({
+  destination: z.string().min(1),
+  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  days: z.array(ItineraryDaySchema).min(1)
+}).superRefine((val, ctx) => {
+  const s = new Date(val.start_date + 'T00:00:00Z').getTime();
+  const e = new Date(val.end_date + 'T00:00:00Z').getTime();
+  if (!Number.isFinite(s) || !Number.isFinite(e)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'dates must be valid ISO yyyy-mm-dd' });
+  } else if (e < s) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'end_date must be >= start_date' });
   }
-  if (typeof it.destination !== 'string' || !it.destination) {
-    errors.push('destination must be string');
-  }
-  if (typeof it.start_date !== 'string' || typeof it.end_date !== 'string') {
-    errors.push('start_date and end_date must be string');
-  }
-  if (!Array.isArray(it.days) || it.days.length <= 0) {
-    errors.push('days must be non-empty array');
-  } else {
-    for (let i = 0; i < it.days.length; i++) {
-      const d = it.days[i];
-      if (!d || typeof d !== 'object') {
-        errors.push(`day[${i}] must be object`);
-        continue;
-      }
-      if (typeof d.day_index !== 'number' || d.day_index <= 0) {
-        errors.push(`day[${i}].day_index must be positive number`);
-      }
-      if (!Array.isArray(d.segments)) {
-        errors.push(`day[${i}].segments must be array`);
-      } else {
-        for (let j = 0; j < d.segments.length; j++) {
-          const s = d.segments[j];
-          if (!s || typeof s !== 'object') {
-            errors.push(`day[${i}].segments[${j}] must be object`);
-            continue;
-          }
-          if (typeof s.title !== 'string' || !s.title) {
-            errors.push(`day[${i}].segments[${j}].title must be string`);
-          }
-        }
-      }
+  for (let i = 0; i < val.days.length; i++) {
+    if (val.days[i].day_index !== i + 1) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `day_index must increment from 1; got ${val.days[i].day_index} at ${i}` });
+      break;
     }
   }
-  return { valid: errors.length === 0, errors: errors.length ? errors : undefined };
+});
+
+export type ItineraryDay = z.infer<typeof ItineraryDaySchema>;
+export type Itinerary = z.infer<typeof ItinerarySchema>;
+
+export function validateItinerary(it: any): { valid: boolean; errors?: string[] } {
+  const parsed = ItinerarySchema.safeParse(it);
+  if (parsed.success) return { valid: true };
+  const errors = parsed.error.issues.map(i => i.message);
+  return { valid: false, errors };
 }
