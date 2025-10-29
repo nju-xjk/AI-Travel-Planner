@@ -1,6 +1,9 @@
 import { SettingsService } from './settingsService';
 import { LLMClient, GenerateItineraryInput, GeneratedItinerary } from './llm/LLMClient';
 import { MockLLMClient } from './llm/mockLLMClient';
+import { OpenAILLMClient } from './llm/openaiClient';
+import { BailianLLMClient } from './llm/bailianClient';
+import { XunfeiLLMClient } from './llm/xunfeiClient';
 import { validateItinerary } from '../schemas/itinerary';
 
 function calculateDaysCount(start: string, end: string): number {
@@ -19,10 +22,25 @@ export class PlannerService {
   }
 
   private getLLMClient(): LLMClient {
-    const provider = (this.settings.getSettings().llmProvider || 'mock').toLowerCase();
-    // For now, only mock is implemented. Future providers can be added here.
+    const cfg = this.settings.getSettings();
+    const enabled = cfg.llmEnabled === true;
+    const provider = (cfg.llmProvider || 'mock').toLowerCase();
+    if (!enabled || provider === 'mock') {
+      return new MockLLMClient();
+    }
+    const apiKey = cfg.LLM_API_KEY;
+    if (!apiKey || typeof apiKey !== 'string' || apiKey.trim() === '') {
+      const err: any = new Error('LLM provider requires API key');
+      err.code = 'BAD_REQUEST';
+      throw err;
+    }
     switch (provider) {
-      case 'mock':
+      case 'openai':
+        return new OpenAILLMClient(apiKey);
+      case 'bailian':
+        return new BailianLLMClient(apiKey);
+      case 'xunfei':
+        return new XunfeiLLMClient(apiKey, cfg.XF_APP_ID);
       default:
         return new MockLLMClient();
     }
