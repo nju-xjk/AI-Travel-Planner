@@ -19,7 +19,7 @@ export function createSpeechRouter(): express.Router {
       if (!file) {
         return res.status(400).json({ code: 'BAD_REQUEST', message: 'audio file is required' });
       }
-      const allowed = ['audio/wav', 'audio/webm', 'audio/mpeg', 'audio/mp3'];
+      const allowed = ['audio/wav', 'audio/x-wav', 'audio/wave', 'audio/webm', 'audio/mpeg', 'audio/mp3', 'audio/ogg'];
       if (file.mimetype && !allowed.includes(file.mimetype)) {
         return res.status(400).json({ code: 'BAD_REQUEST', message: `unsupported audio type: ${file.mimetype}` });
       }

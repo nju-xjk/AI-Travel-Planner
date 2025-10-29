@@ -11,6 +11,7 @@ export default function PlanNew() {
   const [destination, setDestination] = useState('Hangzhou');
   const [start_date, setStart] = useState('2025-05-01');
   const [end_date, setEnd] = useState('2025-05-02');
+  const [preferencesText, setPreferencesText] = useState('');
   const [result, setResult] = useState<any>(null);
   const [budget, setBudget] = useState<any>(null);
   const [msg, setMsg] = useState('');
@@ -21,12 +22,21 @@ export default function PlanNew() {
   const [speechText, setSpeechText] = useState<string>('');
   const [speechConfidence, setSpeechConfidence] = useState<number | null>(null);
   const [speechMsg, setSpeechMsg] = useState<string>('');
+  const [liveRecognizing, setLiveRecognizing] = useState(false);
+  const SpeechRecognitionCtor: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null;
+  const srRef = React.useRef<any>(null);
   const [recording, setRecording] = useState(false);
   const recorderRef = React.useRef<MediaRecorder | null>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
   const chunksRef = React.useRef<Blob[]>([]);
   const [recordMs, setRecordMs] = useState(0);
   const timerRef = React.useRef<number | null>(null);
+  const limitTimerRef = React.useRef<number | null>(null);
+  const audioCtxRef = React.useRef<AudioContext | null>(null);
+  const analyserRef = React.useRef<AnalyserNode | null>(null);
+  const volTimerRef = React.useRef<number | null>(null);
+  const [volume, setVolume] = useState(0);
+  const MAX_RECORD_SEC = 15;
 
   React.useEffect(() => {
     (async () => {
@@ -45,9 +55,13 @@ export default function PlanNew() {
     setResult(null);
     setBudget(null);
     setLoading(true);
+    const payload: any = { destination, start_date, end_date };
+    if (preferencesText && preferencesText.trim()) {
+      payload.preferences = { notes: preferencesText.trim() };
+    }
     const gen = await api<Itinerary>('/planner/generate', {
       method: 'POST',
-      body: JSON.stringify({ destination, start_date, end_date })
+      body: JSON.stringify(payload)
     });
     if (!gen.data) {
       setLoading(false);
@@ -67,6 +81,29 @@ export default function PlanNew() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+      // setup audio context for volume meter
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioCtxRef.current = ctx;
+        const src = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 2048;
+        src.connect(analyser);
+        analyserRef.current = analyser;
+        const data = new Float32Array(analyser.fftSize);
+        volTimerRef.current = window.setInterval(() => {
+          if (!analyserRef.current) return;
+          analyserRef.current.getFloatTimeDomainData(data);
+          let sum = 0;
+          for (let i = 0; i < data.length; i++) {
+            sum += data[i] * data[i];
+          }
+          const rms = Math.sqrt(sum / data.length);
+          setVolume(Math.min(1, rms * 3));
+        }, 100);
+      } catch (_err) {
+        // ignore volume meter errors
+      }
       const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mpeg';
       const rec = new MediaRecorder(stream, { mimeType });
       chunksRef.current = [];
@@ -86,12 +123,29 @@ export default function PlanNew() {
           window.clearInterval(timerRef.current);
           timerRef.current = null;
         }
+        if (limitTimerRef.current) {
+          window.clearTimeout(limitTimerRef.current);
+          limitTimerRef.current = null;
+        }
+        if (volTimerRef.current) {
+          window.clearInterval(volTimerRef.current);
+          volTimerRef.current = null;
+        }
+        if (audioCtxRef.current) {
+          try { audioCtxRef.current.close(); } catch {}
+          audioCtxRef.current = null;
+        }
       };
       recorderRef.current = rec;
       rec.start();
       setRecording(true);
       setRecordMs(0);
       timerRef.current = window.setInterval(() => setRecordMs(prev => prev + 100), 100);
+      limitTimerRef.current = window.setTimeout(() => {
+        if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+          recorderRef.current.stop();
+        }
+      }, MAX_RECORD_SEC * 1000);
     } catch (err: any) {
       setSpeechMsg(`无法开始录音：${err.message || '未知错误'}`);
     }
@@ -101,6 +155,48 @@ export default function PlanNew() {
     if (recorderRef.current && recorderRef.current.state !== 'inactive') {
       recorderRef.current.stop();
     }
+  };
+
+  const startLiveASR = () => {
+    if (!SpeechRecognitionCtor) {
+      setSpeechMsg('当前浏览器不支持实时语音识别（Web Speech API）');
+      return;
+    }
+    try {
+      setSpeechMsg('');
+      setSpeechText('');
+      setSpeechConfidence(null);
+      const rec = new SpeechRecognitionCtor();
+      srRef.current = rec;
+      rec.lang = language || 'zh-CN';
+      rec.interimResults = true;
+      rec.continuous = false;
+      rec.onresult = (evt: any) => {
+        let text = '';
+        for (let i = evt.resultIndex; i < evt.results.length; i++) {
+          text += evt.results[i][0].transcript;
+        }
+        setSpeechText(text);
+      };
+      rec.onerror = (evt: any) => {
+        setSpeechMsg(`实时识别错误：${evt.error || '未知'}`);
+      };
+      rec.onend = () => {
+        setLiveRecognizing(false);
+      };
+      rec.start();
+      setLiveRecognizing(true);
+    } catch (err: any) {
+      setSpeechMsg(`无法开始实时识别：${err.message || '未知错误'}`);
+    }
+  };
+
+  const stopLiveASR = () => {
+    try {
+      const rec = srRef.current;
+      if (rec) rec.stop();
+    } catch {}
+    setLiveRecognizing(false);
   };
 
   return (
@@ -113,6 +209,16 @@ export default function PlanNew() {
               <Input label="开始日期" placeholder="YYYY-MM-DD" value={start_date} onChange={e => setStart(e.target.value)} />
               <Input label="结束日期" placeholder="YYYY-MM-DD" value={end_date} onChange={e => setEnd(e.target.value)} />
             </div>
+            <div className="stack">
+              <div className="label">偏好（可选）</div>
+              <textarea
+                rows={3}
+                placeholder="例如：节奏偏慢、偏好博物馆、避开拥挤景点"
+                value={preferencesText}
+                onChange={e => setPreferencesText(e.target.value)}
+                style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--fg)' }}
+              />
+            </div>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <Button type="submit" variant="primary" disabled={loading}>{loading ? '生成中...' : '生成行程并估算预算'}</Button>
               {msg && <span className="note">{msg}</span>}
@@ -121,8 +227,17 @@ export default function PlanNew() {
           </form>
         </Card>
 
-        <Card title="语音识别（录音或上传）">
+        <Card title="语音识别（实时或录音/上传）">
           <div className="stack">
+            <div className="row" style={{ alignItems: 'center', gap: 12 }}>
+              <Button type="button" onClick={liveRecognizing ? stopLiveASR : startLiveASR}>
+                {liveRecognizing ? '停止实时识别' : '开始实时识别'}{!SpeechRecognitionCtor && '（不支持）'}
+              </Button>
+              <span className="note" style={{ minWidth: 140 }}>{liveRecognizing ? '识别中…' : '已就绪'}</span>
+              {!SpeechRecognitionCtor && (
+                <span className="note">提示：Chrome/Edge 支持 Web Speech，Firefox 暂不支持</span>
+              )}
+            </div>
             <div className="row" style={{ alignItems: 'center', gap: 12 }}>
               <Button type="button" onClick={recording ? stopRecording : startRecording}>
                 {recording ? '停止录音' : '开始录音'}
@@ -130,6 +245,9 @@ export default function PlanNew() {
               <span className="note" style={{ minWidth: 140 }}>
                 {recording ? `录音中… ${Math.floor(recordMs / 1000)}s` : (audioFile ? `就绪：${audioFile.name}` : '未选择音频')}
               </span>
+              <div style={{ width: 80, height: 8, background: '#222', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ width: `${Math.round(volume * 100)}%`, height: '100%', background: recording ? '#4caf50' : '#555' }} />
+              </div>
               <span className="label" style={{ marginLeft: 12 }}>或上传文件</span>
               <input type="file" accept="audio/*" onChange={e => setAudioFile(e.target.files?.[0] ?? null)} />
             </div>
@@ -176,6 +294,20 @@ export default function PlanNew() {
               <div className="stack">
                 <div className="kpi">识别文本：{speechText || '(空)'}</div>
                 {speechConfidence != null && <div className="note">置信度：{Math.round(speechConfidence * 100)}%</div>}
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <Button type="button" onClick={() => {
+                    if (speechText && speechText.trim()) {
+                      setDestination(speechText.trim());
+                      setSpeechMsg('已填充到目的地');
+                    }
+                  }}>填充到目的地</Button>
+                  <Button type="button" onClick={() => {
+                    if (speechText && speechText.trim()) {
+                      setPreferencesText(prev => (prev ? `${prev}\n${speechText.trim()}` : speechText.trim()));
+                      setSpeechMsg('已追加到偏好');
+                    }
+                  }}>追加到偏好</Button>
+                </div>
               </div>
             )}
           </div>
