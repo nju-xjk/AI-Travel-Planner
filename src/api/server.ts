@@ -1,4 +1,7 @@
 import express from 'express';
+import { correlationId } from './middlewares/correlationId';
+import { createRequestLogger } from './middlewares/requestLogger';
+import { loadConfig } from '../config';
 import { openDatabase, initSchema } from '../data/db';
 import { createAuthRouter } from './authRoutes';
 import { createPlannerRouter } from './plannerRoutes';
@@ -12,6 +15,15 @@ export interface ServerOptions {
 export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }) {
   const app = express();
   app.use(express.json());
+  // request correlation id & logging (controlled via env)
+  const env = process.env.NODE_ENV || 'development';
+  const logLevel = (process.env.LOG_LEVEL || (env === 'development' ? 'debug' : 'info')) as any;
+  const requestLogEnv = process.env.REQUEST_LOG;
+  const requestLog = typeof requestLogEnv === 'string' ? requestLogEnv.toLowerCase() !== 'false' : env !== 'test';
+  if (requestLog) {
+    app.use(correlationId());
+    app.use(createRequestLogger(logLevel));
+  }
 
   const db = opts.db ?? openDatabase({ memory: process.env.NODE_ENV === 'test' });
   initSchema(db);
@@ -61,10 +73,9 @@ export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }
 }
 
 if (require.main === module) {
-  const port = Number(process.env.PORT || 3000);
-  const jwtSecret = process.env.JWT_SECRET || 'dev-secret';
-  const app = createApp({ jwtSecret });
-  app.listen(port, () => {
-    console.log(`API server listening on http://localhost:${port}`);
+  const cfg = loadConfig();
+  const app = createApp({ jwtSecret: cfg.jwtSecret });
+  app.listen(cfg.port, () => {
+    console.log(`API server listening on http://localhost:${cfg.port}`);
   });
 }
