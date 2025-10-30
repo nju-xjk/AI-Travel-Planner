@@ -1,9 +1,6 @@
 import { SettingsService } from './settingsService';
 import { LLMClient, GenerateItineraryInput, GeneratedItinerary } from './llm/LLMClient';
-import { MockLLMClient } from './llm/mockLLMClient';
-import { OpenAILLMClient } from './llm/openaiClient';
 import { BailianLLMClient } from './llm/bailianClient';
-import { XunfeiLLMClient } from './llm/xunfeiClient';
 import { validateItinerary } from '../schemas/itinerary';
 import { metrics } from '../observability/metrics';
 
@@ -24,27 +21,13 @@ export class PlannerService {
 
   private getLLMClient(): LLMClient {
     const cfg = this.settings.getSettings();
-    const enabled = cfg.llmEnabled === true;
-    const provider = (cfg.llmProvider || 'mock').toLowerCase();
-    if (!enabled || provider === 'mock') {
-      return new MockLLMClient();
-    }
-    const apiKey = cfg.LLM_API_KEY;
+    const apiKey = (cfg as any).BAILIAN_API_KEY;
     if (!apiKey || typeof apiKey !== 'string' || apiKey.trim() === '') {
-      const err: any = new Error('LLM provider requires API key');
+      const err: any = new Error('BAILIAN_API_KEY is required');
       err.code = 'BAD_REQUEST';
       throw err;
     }
-    switch (provider) {
-      case 'openai':
-        return new OpenAILLMClient(apiKey);
-      case 'bailian':
-        return new BailianLLMClient(apiKey);
-      case 'xunfei':
-        return new XunfeiLLMClient(apiKey, cfg.XF_APP_ID);
-      default:
-        return new MockLLMClient();
-    }
+    return new BailianLLMClient(apiKey);
   }
 
   async suggestItinerary(input: GenerateItineraryInput): Promise<GeneratedItinerary> {
@@ -96,8 +79,9 @@ export class PlannerService {
           if (attempt < MAX_RETRIES) metrics.planner.retries += 1;
           continue; // retry
         }
+        const normalized = this.normalizeItinerary(input, result);
         metrics.planner.success += 1;
-        return result;
+        return normalized;
       } catch (e: any) {
         lastError = e;
         if (e?.code === 'BAD_GATEWAY' && typeof e?.message === 'string' && e.message.includes('timeout')) {
@@ -112,5 +96,34 @@ export class PlannerService {
     err.code = lastError?.code || 'BAD_GATEWAY';
     metrics.planner.failed += 1;
     throw err;
+  }
+
+  private normalizeItinerary(input: GenerateItineraryInput, it: GeneratedItinerary): GeneratedItinerary {
+    const isPlaceholder = (v: any) => typeof v === 'string' && /^(\?+|N\/?A|unknown|未知|未定|tbd)$/i.test(v.trim());
+    const clean = (v: any, fallback: string) => {
+      if (typeof v !== 'string') return fallback;
+      const t = v.trim();
+      if (!t) return fallback;
+      if (isPlaceholder(t)) return fallback;
+      return t;
+    };
+    const out: GeneratedItinerary = {
+      destination: input.destination,
+      start_date: typeof it.start_date === 'string' ? it.start_date : input.start_date,
+      end_date: typeof it.end_date === 'string' ? it.end_date : input.end_date,
+      days: (Array.isArray(it.days) ? it.days : []).map((d, idx) => {
+        const day_index = Number(d?.day_index) || (idx + 1);
+        const segments = Array.isArray(d?.segments) ? d.segments : [];
+        const normalizedSegments = segments.map((s: any) => {
+          const title = clean(s?.title, '行程安排');
+          const location = s?.location != null ? clean(s.location, '未知') : s?.location;
+          const notes = s?.notes != null ? clean(s.notes, '') : s?.notes;
+          return { ...s, title, location, notes };
+        });
+        const ensuredSegments = normalizedSegments.length > 0 ? normalizedSegments : [{ title: '自由活动', timeRange: '09:00-18:00', notes: '未提供具体安排' }];
+        return { day_index, segments: ensuredSegments };
+      })
+    };
+    return out;
   }
 }

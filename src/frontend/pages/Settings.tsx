@@ -33,12 +33,7 @@ export default function Settings() {
       <div className="grid two">
         <Card title="通用设置">
           <div className="stack">
-            <Input label="LLM Provider" value={settings.llmProvider || ''} onChange={e => onChange('llmProvider', e.target.value)} />
-            <div className="row">
-              <div className="label">llmEnabled</div>
-              <input type="checkbox" checked={!!settings.llmEnabled} onChange={e => onChange('llmEnabled', e.target.checked)} />
-            </div>
-            <Input label="LLM_API_KEY" placeholder="用于真实 LLM 提供商" value={settings.LLM_API_KEY || ''} onChange={e => onChange('LLM_API_KEY', e.target.value)} />
+            <Input label="BAILIAN_API_KEY" placeholder="用于百炼 API 密钥" value={settings.BAILIAN_API_KEY || ''} onChange={e => onChange('BAILIAN_API_KEY', e.target.value)} />
           <Input label="AMAP_API_KEY" placeholder="用于高德地图 JSAPI" value={settings.AMAP_API_KEY || ''} onChange={e => onChange('AMAP_API_KEY', e.target.value)} />
           <Input label="XF_API_KEY" placeholder="用于科大讯飞语音识别" value={settings.XF_API_KEY || ''} onChange={e => onChange('XF_API_KEY', e.target.value)} />
           <Input label="XF_API_SECRET" placeholder="用于科大讯飞语音识别（Secret）" value={settings.XF_API_SECRET || ''} onChange={e => onChange('XF_API_SECRET', e.target.value)} />

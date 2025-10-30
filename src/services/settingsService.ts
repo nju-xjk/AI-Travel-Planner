@@ -2,9 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 export interface Settings {
-  llmProvider?: string;
-  llmEnabled?: boolean;
-  LLM_API_KEY?: string;
+  BAILIAN_API_KEY?: string;
   AMAP_API_KEY?: string;
   XF_API_KEY?: string;
   XF_API_SECRET?: string;
@@ -46,7 +44,7 @@ export class SettingsService {
 
   validate(payload: any, current?: Settings): { valid: boolean; message?: string } {
     const allowedKeys = [
-      'llmProvider', 'llmEnabled', 'LLM_API_KEY', 'AMAP_API_KEY', 'XF_API_KEY', 'XF_API_SECRET', 'XF_APP_ID', 'LLM_TIMEOUT_MS', 'LLM_MAX_RETRIES',
+      'BAILIAN_API_KEY', 'AMAP_API_KEY', 'XF_API_KEY', 'XF_API_SECRET', 'XF_APP_ID', 'LLM_TIMEOUT_MS', 'LLM_MAX_RETRIES',
       'BUDGET_COEFF_TRANSPORT', 'BUDGET_COEFF_FOOD', 'BUDGET_COEFF_ENTERTAINMENT', 'BUDGET_COEFF_ACCOMMODATION', 'BUDGET_COEFF_SHOPPING', 'BUDGET_COEFF_OTHER',
       'BUDGET_PERDAY_TRANSPORT', 'BUDGET_PERDAY_FOOD', 'BUDGET_PERDAY_ENTERTAINMENT', 'BUDGET_PERDAY_ACCOMMODATION'
     ];
@@ -56,11 +54,7 @@ export class SettingsService {
         return { valid: false, message: `unknown key: ${k}` };
       }
       const v = payload[k];
-      if (k === 'llmEnabled') {
-        if (v != null && typeof v !== 'boolean') {
-          return { valid: false, message: `key ${k} must be boolean` };
-        }
-      } else if (k === 'LLM_TIMEOUT_MS' || k === 'LLM_MAX_RETRIES' || k.startsWith('BUDGET_')) {
+      if (k === 'LLM_TIMEOUT_MS' || k === 'LLM_MAX_RETRIES' || k.startsWith('BUDGET_')) {
         if (v != null && typeof v !== 'number') {
           return { valid: false, message: `key ${k} must be number` };
         }
@@ -98,25 +92,7 @@ export class SettingsService {
       }
     }
 
-    // llmProvider enum validation if provided
-    const providerRaw = (payload?.llmProvider ?? current?.llmProvider);
-    if (typeof providerRaw === 'string') {
-      const provider = providerRaw.toLowerCase();
-      const allowedProviders = ['mock', 'openai', 'bailian', 'xunfei'];
-      if (!allowedProviders.includes(provider)) {
-        return { valid: false, message: `llmProvider must be one of: ${allowedProviders.join(', ')}` };
-      }
-    }
-
-    // if enabling real LLM (non-mock), ensure API key present
-    const enabled = payload?.llmEnabled ?? current?.llmEnabled;
-    const providerFinal = (payload?.llmProvider ?? current?.llmProvider)?.toLowerCase();
-    if (enabled === true && providerFinal && providerFinal !== 'mock') {
-      const key = (payload?.LLM_API_KEY ?? current?.LLM_API_KEY);
-      if (!key || typeof key !== 'string' || key.trim() === '') {
-        return { valid: false, message: 'LLM_API_KEY is required when llmEnabled=true and provider is not mock' };
-      }
-    }
+    // 简化：仅校验字符串长度与类型
     return { valid: true };
   }
 
