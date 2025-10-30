@@ -33,9 +33,8 @@ export default function Settings() {
       <div className="grid two">
         <Card title="通用设置">
           <div className="stack">
-            <Input label="BAILIAN_API_KEY" placeholder="用于百炼 API 密钥" value={settings.BAILIAN_API_KEY || ''} onChange={e => onChange('BAILIAN_API_KEY', e.target.value)} />
+          <Input label="BAILIAN_API_KEY" placeholder="用于百炼 API 密钥" value={settings.BAILIAN_API_KEY || ''} onChange={e => onChange('BAILIAN_API_KEY', e.target.value)} />
           <Input label="BAIDU_BROWSER_AK" placeholder="用于百度地图 浏览器端AK" value={settings.BAIDU_BROWSER_AK || ''} onChange={e => onChange('BAIDU_BROWSER_AK', e.target.value)} />
-          <Input label="BAIDU_SERVER_AK" placeholder="用于百度地图 服务端AK（可选）" value={settings.BAIDU_SERVER_AK || ''} onChange={e => onChange('BAIDU_SERVER_AK', e.target.value)} />
           <Input label="XF_API_KEY" placeholder="用于科大讯飞语音识别" value={settings.XF_API_KEY || ''} onChange={e => onChange('XF_API_KEY', e.target.value)} />
           <Input label="XF_API_SECRET" placeholder="用于科大讯飞语音识别（Secret）" value={settings.XF_API_SECRET || ''} onChange={e => onChange('XF_API_SECRET', e.target.value)} />
           <Input label="XF_APP_ID" placeholder="用于科大讯飞应用ID" value={settings.XF_APP_ID || ''} onChange={e => onChange('XF_APP_ID', e.target.value)} />

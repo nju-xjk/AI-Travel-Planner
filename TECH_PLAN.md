@@ -331,7 +331,7 @@
       "io_contract": {
         "inputs": [
           "前端：`ItineraryJSON`",
-          "运行时配置：`BAIDU_BROWSER_AK`（前端），`BAIDU_SERVER_AK`（后端可选）"
+          "运行时配置：`BAIDU_BROWSER_AK`（前端）"
         ],
         "outputs": [
           "地图渲染组件与标注交互"
@@ -475,7 +475,7 @@
       "goal_DOD": "实现前端设置页输入API Key与地图Key；后端安全载入运行；单测≥70%。",
       "io_contract": {
         "inputs": [
-          "前端表单：`LLM_API_KEY`, `BAIDU_BROWSER_AK`, `BAIDU_SERVER_AK`, `XF_API_KEY`, `XF_APP_ID`",
+          "前端表单：`LLM_API_KEY`, `BAIDU_BROWSER_AK`, `XF_API_KEY`, `XF_APP_ID`",
           "本地配置文件写入：`config/local.json`"
         ],
         "outputs": [
