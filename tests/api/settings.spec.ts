@@ -12,18 +12,17 @@ describe('Settings API', () => {
   });
 
   it('POST /settings writes and reads back', async () => {
-    const payload = { llmProvider: 'mock', LLM_API_KEY: 'abc', AMAP_API_KEY: 'def' };
+    const payload = { BAILIAN_API_KEY: 'abc', BAIDU_BROWSER_AK: 'def' };
     const res = await request(app).post('/settings').send(payload);
     expect(res.status).toBe(200);
-    expect(res.body?.data?.llmProvider).toBe('mock');
     const getRes = await request(app).get('/settings');
     expect(getRes.status).toBe(200);
-    expect(getRes.body?.data?.LLM_API_KEY).toBe('abc');
-    expect(getRes.body?.data?.AMAP_API_KEY).toBe('def');
+    expect(getRes.body?.data?.BAILIAN_API_KEY).toBe('abc');
+    expect(getRes.body?.data?.BAIDU_BROWSER_AK).toBe('def');
   });
 
   it('rejects invalid key type', async () => {
-    const res = await request(app).post('/settings').send({ LLM_API_KEY: 123 });
+    const res = await request(app).post('/settings').send({ BAIDU_BROWSER_AK: 123 });
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('BAD_REQUEST');
   });

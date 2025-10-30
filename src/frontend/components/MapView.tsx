@@ -20,13 +20,14 @@ function useLocations(itinerary?: Itinerary) {
   }, [itinerary]);
 }
 
-async function loadAmapScript(key: string): Promise<boolean> {
-  if ((window as any).AMap) return true;
+// Load Baidu Maps JS v3.0 (non‑GL) to use LocalSearch easily
+async function loadBaiduScript(ak: string): Promise<boolean> {
+  if ((window as any).BMap) return true;
   return new Promise(resolve => {
     const script = document.createElement('script');
-    script.src = `https://webapi.amap.com/maps?v=2.0&key=${key}&plugin=AMap.PlaceSearch`;
+    script.src = `https://api.map.baidu.com/api?v=3.0&ak=${ak}`;
     script.async = true;
-    script.onload = () => resolve(!!(window as any).AMap);
+    script.onload = () => resolve(!!(window as any).BMap);
     script.onerror = () => resolve(false);
     document.head.appendChild(script);
   });
@@ -35,34 +36,57 @@ async function loadAmapScript(key: string): Promise<boolean> {
 export default function MapView({ itinerary, apiKey }: { itinerary?: Itinerary; apiKey?: string }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const locations = useLocations(itinerary);
 
   useEffect(() => {
     let disposed = false;
     (async () => {
       if (!apiKey) return;
-      const ok = await loadAmapScript(apiKey);
-      if (!ok || disposed) return;
-      setReady(true);
+      const ok = await loadBaiduScript(apiKey);
+      if (!ok || disposed) {
+        if (!disposed) setLoadError('地图脚本加载失败');
+        return;
+      }
       try {
-        const AMap = (window as any).AMap;
-        const map = new AMap.Map(containerRef.current!, { zoom: 11 });
+        const BMap = (window as any).BMap;
+        const map = new BMap.Map(containerRef.current!);
+        map.enableScrollWheelZoom(true);
+        if (disposed) return;
+        setReady(true);
         // simple place search for first location only to demonstrate
         if (locations[0]) {
-          AMap.plugin('AMap.PlaceSearch', () => {
-            const placeSearch = new AMap.PlaceSearch();
-            placeSearch.search(locations[0], (status: string, result: any) => {
-              if (status === 'complete' && result?.poiList?.pois?.length) {
-                const poi = result.poiList.pois[0];
-                const marker = new AMap.Marker({ position: poi.location, title: poi.name });
-                map.add(marker);
-                map.setCenter(poi.location);
-              }
-            });
+          const local = new BMap.LocalSearch(map, {
+            onSearchComplete: (results: any) => {
+              try {
+                if (!results || typeof results.getPoi !== 'function') return;
+                const poi = results.getPoi(0);
+                if (!poi || !poi.point) return;
+                const marker = new BMap.Marker(poi.point);
+                map.addOverlay(marker);
+                map.centerAndZoom(poi.point, 12);
+              } catch { /* noop */ }
+            }
           });
+          local.search(locations[0]);
+        } else if (itinerary?.destination) {
+          const local = new BMap.LocalSearch(map, {
+            onSearchComplete: (results: any) => {
+              try {
+                const poi = results.getPoi(0);
+                if (poi?.point) {
+                  map.centerAndZoom(poi.point, 11);
+                }
+              } catch { /* noop */ }
+            }
+          });
+          local.search(String(itinerary.destination));
         }
       } catch (_err) {
-        // noop; fallback UI will render
+        if (!disposed) {
+          setLoadError('地图初始化失败，请检查百度浏览器端AK与域名白名单');
+          setReady(false);
+        }
       }
     })();
     return () => { disposed = true; };
@@ -76,14 +100,16 @@ export default function MapView({ itinerary, apiKey }: { itinerary?: Itinerary; 
         <div ref={containerRef} style={{ height: 360, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }} />
       ) : (
         <div className="stack">
-          <div className="note">未检测到地图脚本或未配置 AMAP_API_KEY，展示地点列表：</div>
+          <div className="note">
+            {loadError ? loadError : '未检测到地图脚本或未配置百度浏览器端AK，展示地点列表：'}
+          </div>
           {locations.length === 0 ? (
             <div className="note">行程中未包含地点信息</div>
           ) : (
             <ul style={{ paddingLeft: 16 }}>
               {locations.map((loc) => (
                 <li key={loc}>
-                  <a href={`https://www.amap.com/search?keywords=${encodeURIComponent(loc)}`} target="_blank" rel="noreferrer">{loc}</a>
+                  <a href={`https://map.baidu.com/search/${encodeURIComponent(loc)}`} target="_blank" rel="noreferrer">{loc}</a>
                 </li>
               ))}
             </ul>

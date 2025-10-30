@@ -75,7 +75,7 @@ export default function ItineraryView({ itinerary }: { itinerary: Itinerary }) {
                         <div className="segment-meta">
                           {time && <span className="chip">{time}</span>}
                           {seg.location && (
-                            <a className="chip link" href={`https://www.amap.com/search?keywords=${encodeURIComponent(seg.location)}`} target="_blank" rel="noreferrer">
+                            <a className="chip link" href={`https://map.baidu.com/search/${encodeURIComponent(seg.location)}`} target="_blank" rel="noreferrer">
                               {seg.location}
                             </a>
                           )}

@@ -3,7 +3,8 @@ import path from 'path';
 
 export interface Settings {
   BAILIAN_API_KEY?: string;
-  AMAP_API_KEY?: string;
+  BAIDU_BROWSER_AK?: string;
+  BAIDU_SERVER_AK?: string;
   XF_API_KEY?: string;
   XF_API_SECRET?: string;
   XF_APP_ID?: string;
@@ -44,7 +45,7 @@ export class SettingsService {
 
   validate(payload: any, current?: Settings): { valid: boolean; message?: string } {
     const allowedKeys = [
-      'BAILIAN_API_KEY', 'AMAP_API_KEY', 'XF_API_KEY', 'XF_API_SECRET', 'XF_APP_ID', 'LLM_TIMEOUT_MS', 'LLM_MAX_RETRIES',
+      'BAILIAN_API_KEY', 'BAIDU_BROWSER_AK', 'BAIDU_SERVER_AK', 'XF_API_KEY', 'XF_API_SECRET', 'XF_APP_ID', 'LLM_TIMEOUT_MS', 'LLM_MAX_RETRIES',
       'BUDGET_COEFF_TRANSPORT', 'BUDGET_COEFF_FOOD', 'BUDGET_COEFF_ENTERTAINMENT', 'BUDGET_COEFF_ACCOMMODATION', 'BUDGET_COEFF_SHOPPING', 'BUDGET_COEFF_OTHER',
       'BUDGET_PERDAY_TRANSPORT', 'BUDGET_PERDAY_FOOD', 'BUDGET_PERDAY_ENTERTAINMENT', 'BUDGET_PERDAY_ACCOMMODATION'
     ];

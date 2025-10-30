@@ -20,6 +20,24 @@ export class PlannerService {
   }
 
   private getLLMClient(): LLMClient {
+    // In test environment, avoid external network calls by using a deterministic mock
+    if ((process.env.NODE_ENV || 'development') === 'test') {
+      return {
+        async generateItinerary(input: GenerateItineraryInput): Promise<GeneratedItinerary> {
+          const daysCount = calculateDaysCount(input.start_date, input.end_date);
+          const days = Array.from({ length: daysCount }, (_, i) => ({
+            day_index: i + 1,
+            segments: [{ title: 'Mock segment', location: input.destination }]
+          }));
+          return {
+            destination: input.destination,
+            start_date: input.start_date,
+            end_date: input.end_date,
+            days
+          };
+        }
+      } as LLMClient;
+    }
     const cfg = this.settings.getSettings();
     const apiKey = (cfg as any).BAILIAN_API_KEY;
     if (!apiKey || typeof apiKey !== 'string' || apiKey.trim() === '') {

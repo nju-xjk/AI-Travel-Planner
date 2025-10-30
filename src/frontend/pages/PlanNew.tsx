@@ -18,7 +18,6 @@ export default function PlanNew() {
   const [budget, setBudget] = useState<any>(null);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
-  const [amapKey, setAmapKey] = useState<string | undefined>(undefined);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [language, setLanguage] = useState('zh-CN');
   const [speechText, setSpeechText] = useState<string>('');
@@ -37,13 +36,14 @@ export default function PlanNew() {
   const [volume, setVolume] = useState(0);
   const MAX_RECORD_SEC = 60;
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [baiduAk, setBaiduAk] = useState<string | undefined>();
 
   React.useEffect(() => {
     (async () => {
       try {
         const res = await api<Record<string, any>>('/settings');
-        if (res.data && typeof res.data.AMAP_API_KEY === 'string') {
-          setAmapKey(res.data.AMAP_API_KEY);
+        if (res.data && typeof res.data.BAIDU_BROWSER_AK === 'string') {
+          setBaiduAk(res.data.BAIDU_BROWSER_AK);
         }
       } catch { /* noop */ }
     })();
@@ -287,7 +287,7 @@ export default function PlanNew() {
           <>
             <ItineraryView itinerary={result} />
             <div className="spacer" />
-            <MapView itinerary={result} apiKey={amapKey} />
+            <MapView itinerary={result} apiKey={baiduAk} />
           </>
         )}
       </div>
