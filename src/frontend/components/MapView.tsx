@@ -81,6 +81,8 @@ async function loadBaiduGLScript(ak: string): Promise<boolean> {
 export default function MapView({ itinerary, apiKey }: { itinerary?: Itinerary; apiKey?: string }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
+  // 缓存地点检索结果，避免在“全部/第N天”切换时重复请求地图API
+  const searchCacheRef = useRef<Map<string, any>>(new Map());
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const locations = useLocations(itinerary);
@@ -96,6 +98,11 @@ export default function MapView({ itinerary, apiKey }: { itinerary?: Itinerary; 
       setDayIndex(0);
     }
   }, [dayLocations.length]);
+
+  // 当行程整体发生变化（用户重新生成线路）时，清空缓存以重新检索
+  useEffect(() => {
+    searchCacheRef.current.clear();
+  }, [itinerary]);
 
   useEffect(() => {
     let disposed = false;
@@ -171,13 +178,20 @@ export default function MapView({ itinerary, apiKey }: { itinerary?: Itinerary; 
       const points: any[] = [];
       const seen = new Set<string>();
 
+      const makeKey = (kw: string) => `${dest ?? ''}|${kw.trim()}`;
       const searchOne = (kw: string) => new Promise<any>((resolve) => {
+        const key = makeKey(kw);
+        if (searchCacheRef.current.has(key)) {
+          return resolve(searchCacheRef.current.get(key));
+        }
         try {
           const local = new BMap.LocalSearch(map, {
             onSearchComplete: (results: any) => {
               try {
                 const poi = results && typeof results.getPoi === 'function' ? results.getPoi(0) : null;
-                resolve(poi && poi.point ? poi.point : null);
+                const pt = poi && poi.point ? poi.point : null;
+                if (pt) searchCacheRef.current.set(key, pt);
+                resolve(pt);
               } catch { resolve(null); }
             }
           });
