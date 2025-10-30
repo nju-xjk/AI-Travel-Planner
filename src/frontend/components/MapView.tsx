@@ -20,6 +20,26 @@ function useLocations(itinerary?: Itinerary) {
   }, [itinerary]);
 }
 
+function useDayLocations(itinerary?: Itinerary) {
+  return useMemo(() => {
+    if (!itinerary) return [] as string[][];
+    const days = itinerary.days || [];
+    return days.map(d => {
+      const list: string[] = [];
+      for (const s of d.segments || []) {
+        if (s.location && s.location.trim()) list.push(s.location.trim());
+      }
+      return list;
+    });
+  }, [itinerary]);
+}
+
+function getDayColor(idx: number) {
+  const palette = ['#2f54eb', '#13c2c2', '#eb2f96', '#52c41a', '#fa8c16', '#722ed1'];
+  if (idx < 0) return '#faad14'; // 全部天数综合路线
+  return palette[idx % palette.length];
+}
+
 // Load Baidu Maps JS v3.0 (non‑GL) via getscript to avoid document.write
 async function loadBaiduScript(ak: string): Promise<boolean> {
   if ((window as any).BMap) return true;
@@ -60,9 +80,22 @@ async function loadBaiduGLScript(ak: string): Promise<boolean> {
 
 export default function MapView({ itinerary, apiKey }: { itinerary?: Itinerary; apiKey?: string }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<any>(null);
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const locations = useLocations(itinerary);
+  const dayLocations = useDayLocations(itinerary);
+  const [dayIndex, setDayIndex] = useState<number>(0); // -1 代表“全部天数”
+
+  useEffect(() => {
+    // 选择第一个有地点的日期作为默认
+    if (dayLocations.length > 0) {
+      const firstIdx = dayLocations.findIndex(dl => dl.length > 0);
+      setDayIndex(firstIdx >= 0 ? firstIdx : 0);
+    } else {
+      setDayIndex(0);
+    }
+  }, [dayLocations.length]);
 
   useEffect(() => {
     let disposed = false;
@@ -77,34 +110,15 @@ export default function MapView({ itinerary, apiKey }: { itinerary?: Itinerary; 
           map.enableScrollWheelZoom(true);
           if (disposed) return;
           setReady(true);
-          // simple place search for first location only to demonstrate
-          if (locations[0]) {
-            const local = new BMap.LocalSearch(map, {
-              onSearchComplete: (results: any) => {
-                try {
-                  if (!results || typeof results.getPoi !== 'function') return;
-                  const poi = results.getPoi(0);
-                  if (!poi || !poi.point) return;
-                  const marker = new BMap.Marker(poi.point);
-                  map.addOverlay(marker);
-                  map.centerAndZoom(poi.point, 12);
-                } catch { /* noop */ }
-              }
-            });
-            local.search(locations[0]);
-          } else if (itinerary?.destination) {
-            const local = new BMap.LocalSearch(map, {
-              onSearchComplete: (results: any) => {
-                try {
-                  const poi = results.getPoi(0);
-                  if (poi?.point) {
-                    map.centerAndZoom(poi.point, 11);
-                  }
-                } catch { /* noop */ }
-              }
-            });
-            local.search(String(itinerary.destination));
+          mapRef.current = map;
+          const allList = dayLocations.flat();
+          const list = dayIndex === -1 ? allList : (dayLocations[dayIndex] || []);
+          // 设置一个安全的初始中心，避免地图未居中时显示空白
+          const seedName = list[0] || (itinerary?.destination ? String(itinerary.destination) : undefined);
+          if (seedName) {
+            try { map.centerAndZoom(seedName, 11); } catch { /* noop */ }
           }
+          await drawDayRouteBMap(mapRef.current, list, itinerary?.destination, getDayColor(dayIndex));
         } catch (_err) {
           if (!disposed) {
             setLoadError('地图初始化失败，请检查百度浏览器端AK与域名白名单');
@@ -137,12 +151,111 @@ export default function MapView({ itinerary, apiKey }: { itinerary?: Itinerary; 
       }
     })();
     return () => { disposed = true; };
-  }, [apiKey, locations]);
+  }, [apiKey]);
+
+  useEffect(() => {
+    // 日期切换或行程变更时重绘（非GL）
+    const BMap = (window as any).BMap;
+    if (BMap && mapRef.current) {
+      const allList = dayLocations.flat();
+      const list = dayIndex === -1 ? allList : (dayLocations[dayIndex] || []);
+      drawDayRouteBMap(mapRef.current, list, itinerary?.destination, getDayColor(dayIndex));
+    }
+  }, [dayIndex, itinerary, dayLocations]);
+
+  async function drawDayRouteBMap(map: any, keywords: string[], dest?: string, color = '#2f54eb') {
+    const BMap = (window as any).BMap;
+    if (!BMap || !map) return;
+    try {
+      map.clearOverlays();
+      const points: any[] = [];
+      const seen = new Set<string>();
+
+      const searchOne = (kw: string) => new Promise<any>((resolve) => {
+        try {
+          const local = new BMap.LocalSearch(map, {
+            onSearchComplete: (results: any) => {
+              try {
+                const poi = results && typeof results.getPoi === 'function' ? results.getPoi(0) : null;
+                resolve(poi && poi.point ? poi.point : null);
+              } catch { resolve(null); }
+            }
+          });
+          local.search(kw);
+        } catch { resolve(null); }
+      });
+
+      for (let i = 0; i < keywords.length; i++) {
+        const kw = keywords[i];
+        if (!kw || seen.has(kw)) continue;
+        seen.add(kw);
+        const pt = await searchOne(kw);
+        if (pt) {
+          points.push(pt);
+          const marker = new BMap.Marker(pt);
+          map.addOverlay(marker);
+          // 标签显示序号与名称
+          const label = new BMap.Label(`${i + 1}. ${kw}`, { offset: new BMap.Size(12, -20) });
+          label.setStyle({
+            color: '#fff',
+            backgroundColor: color,
+            border: 'none',
+            borderRadius: '6px',
+            padding: '2px 6px',
+            fontSize: '12px'
+          } as any);
+          marker.setLabel(label);
+        }
+      }
+
+      if (points.length > 1) {
+        const polyline = new BMap.Polyline(points, { strokeColor: color, strokeWeight: 4, strokeOpacity: 0.9 });
+        map.addOverlay(polyline);
+        map.setViewport(points);
+      } else if (points.length === 1) {
+        map.centerAndZoom(points[0], 12);
+      } else if (dest) {
+        const pt = await searchOne(String(dest));
+        if (pt) {
+          map.centerAndZoom(pt, 11);
+        }
+      }
+    } catch { /* noop */ }
+  }
 
   if (!itinerary) return null;
 
   return (
     <Card title="地图预览">
+      {dayLocations.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setDayIndex(-1)}
+            style={{
+              padding: '6px 10px',
+              borderRadius: 8,
+              border: '1px solid var(--border)',
+              background: dayIndex === -1 ? getDayColor(-1) : 'var(--bg)',
+              color: dayIndex === -1 ? '#fff' : 'var(--fg)',
+              cursor: 'pointer'
+            }}
+          >全部</button>
+          {dayLocations.map((dl, idx) => (
+            <button
+              key={idx}
+              onClick={() => setDayIndex(idx)}
+              style={{
+                padding: '6px 10px',
+                borderRadius: 8,
+                border: '1px solid var(--border)',
+                background: idx === dayIndex ? getDayColor(idx) : 'var(--bg)',
+                color: idx === dayIndex ? '#fff' : 'var(--fg)',
+                cursor: 'pointer'
+              }}
+            >第{idx + 1}天{dl.length ? `（${dl.length}点）` : ''}</button>
+          ))}
+        </div>
+      )}
       {apiKey && (
         <div ref={containerRef} style={{ height: 360, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', marginBottom: 12 }} />
       )}
