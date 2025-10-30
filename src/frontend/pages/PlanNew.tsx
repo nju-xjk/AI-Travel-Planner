@@ -4,6 +4,8 @@ import Card from '../components/Card';
 import Input from '../components/Input';
 import Button from '../components/Button';
 import MapView from '../components/MapView';
+import BudgetView from '../components/BudgetView';
+import ItineraryView from '../components/ItineraryView';
 
 type Itinerary = { destination: string; start_date: string; end_date: string; days: any[] };
 
@@ -283,11 +285,7 @@ export default function PlanNew() {
 
         {result && (
           <>
-            <Card title="行程">
-              <div className="kpi">📍 {result.destination} · 🗓️ {result.start_date} → {result.end_date}</div>
-              <div className="spacer" />
-              <pre style={{ background: '#0a1020', padding: 12, borderRadius: 12, border: '1px solid var(--border)', overflow: 'auto' }}>{JSON.stringify(result, null, 2)}</pre>
-            </Card>
+            <ItineraryView itinerary={result} />
             <div className="spacer" />
             <MapView itinerary={result} apiKey={amapKey} />
           </>
@@ -297,9 +295,7 @@ export default function PlanNew() {
       {budget && (
         <>
           <div className="spacer" />
-          <Card title="预算估算">
-            <pre style={{ background: '#0a1020', padding: 12, borderRadius: 12, border: '1px solid var(--border)', overflow: 'auto' }}>{JSON.stringify(budget, null, 2)}</pre>
-          </Card>
+          <BudgetView estimate={budget} />
         </>
       )}
     </div>

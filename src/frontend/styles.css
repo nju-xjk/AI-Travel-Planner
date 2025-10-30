@@ -144,3 +144,53 @@ body {
 .spacer { height: 16px; }
 
 .footer { color: var(--muted); text-align: center; padding: 20px 0; }
+
+/* Itinerary view */
+.itinerary-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border);
+}
+.itinerary-title { font-size: 18px; font-weight: 700; }
+.itinerary-dates { color: var(--muted); }
+.itinerary-days { display: grid; gap: 12px; margin-top: 12px; }
+.itinerary-day { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(17,24,39,0.4);
+  cursor: pointer;
+}
+.day-title { font-weight: 600; }
+.day-toggle { background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+.segments { display: grid; gap: 10px; padding: 12px; background: rgba(11,18,34,0.4); }
+.segment-card { display: grid; grid-template-columns: 36px 1fr; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: #0a1020; }
+.segment-icon { font-size: 22px; display: flex; align-items: center; justify-content: center; }
+.segment-title { font-weight: 600; }
+.segment-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+.chip.link { text-decoration: none; color: #93c5fd; border-color: rgba(147,197,253,0.35); }
+.segment-notes { margin-top: 6px; color: var(--muted); font-size: 13px; }
+
+/* Budget view */
+.budget-header {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.budget-total { font-size: 20px; font-weight: 700; }
+.budget-meta { color: var(--muted); font-size: 13px; }
+.breakdown-list { display: grid; gap: 10px; }
+.breakdown-item { padding: 8px 0; }
+.breakdown-row { display: flex; align-items: baseline; justify-content: space-between; }
+.breakdown-label { font-weight: 600; }
+.breakdown-value { color: var(--muted); }
+.breakdown-bar { height: 8px; border-radius: 999px; background: rgba(31,41,55,0.6); border: 1px solid var(--border); overflow: hidden; }
+.breakdown-bar-fill { height: 100%; background: linear-gradient(90deg, #60a5fa, var(--primary)); }
+.warnings { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.warning-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 999px; border: 1px solid rgba(245,158,11,0.35); color: #f59e0b; background: rgba(245,158,11,0.12); font-size: 12px; }
