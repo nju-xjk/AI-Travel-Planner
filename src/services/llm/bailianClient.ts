@@ -67,13 +67,13 @@ export class BailianLLMClient implements LLMClient {
   async generateItinerary(input: GenerateItineraryInput): Promise<GeneratedItinerary> {
     console.log('[BailianLLMClient] generateItinerary called with input:', JSON.stringify(input, null, 2));
     
-    const { destination, start_date, end_date, preferences } = input;
+    const { destination, start_date, end_date, preferences, party_size, budget } = input;
     const daysCount = calculateDaysCount(start_date, end_date);
 
     // 通过明确的提示词要求严格JSON输出，字段与项目Schema一致
     const prompt = [
       '你是一名行程规划助手，请严格输出一个 JSON（不要任何解释或附加文本）。',
-      '字段必须为：destination, start_date, end_date, days。',
+      '字段必须为：destination, start_date, end_date, days, budget, party_size。',
       'days 为数组，长度等于行程天数；每个元素包含 day_index（从1开始递增）、segments（数组，至少1个）。',
       'segments 每项包含至少 title；可选：startTime, endTime（格式HH:MM）、location, notes, type（transport|accommodation|food|entertainment|attraction|shopping|other）, costEstimate。',
       '要求所有时间字段使用 24小时制 HH:MM。',
@@ -84,7 +84,9 @@ export class BailianLLMClient implements LLMClient {
       `start_date: ${start_date}`,
       `end_date: ${end_date}`,
       `days_count: ${daysCount}`,
-      preferences ? `preferences_hint: ${JSON.stringify(preferences)}` : ''
+      preferences ? `preferences_hint: ${JSON.stringify(preferences)}` : '',
+      typeof party_size === 'number' ? `party_size: ${party_size}` : 'party_size: 1',
+      typeof budget === 'number' ? `budget_hint: ${budget}` : 'budget_hint: 未提供。请结合行程为该人数预测总预算（CNY），输出为 budget 字段的数字。'
     ].filter(Boolean).join('\n');
 
     console.log('[BailianLLMClient] Generated prompt:', prompt);

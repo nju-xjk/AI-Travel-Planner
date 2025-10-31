@@ -24,7 +24,9 @@ export const ItinerarySchema = z.object({
   destination: z.string().min(1),
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  days: z.array(ItineraryDaySchema).min(1)
+  days: z.array(ItineraryDaySchema).min(1),
+  budget: z.number().positive().optional(),
+  party_size: z.number().int().positive().optional()
 }).superRefine((val, ctx) => {
   const s = new Date(val.start_date + 'T00:00:00Z').getTime();
   const e = new Date(val.end_date + 'T00:00:00Z').getTime();

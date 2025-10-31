@@ -19,6 +19,7 @@ type Itinerary = {
   start_date: string;
   end_date: string;
   days: ItineraryDay[];
+  budget?: number;
 };
 
 function typeIcon(type?: DaySegment['type']): string {
@@ -41,7 +42,7 @@ function formatTime(seg: DaySegment): string | null {
   return null;
 }
 
-export default function ItineraryView({ itinerary }: { itinerary: Itinerary }) {
+export default function ItineraryView({ itinerary, singleDayIndex }: { itinerary: Itinerary; singleDayIndex?: number }) {
   const [openDays, setOpenDays] = React.useState<Record<number, boolean>>(() => {
     const init: Record<number, boolean> = {};
     for (const d of itinerary.days || []) init[d.day_index] = true;
@@ -55,15 +56,20 @@ export default function ItineraryView({ itinerary }: { itinerary: Itinerary }) {
       <div className="itinerary-header">
         <div className="itinerary-title">📍 {itinerary.destination}</div>
         <div className="itinerary-dates">🗓️ {itinerary.start_date} → {itinerary.end_date}</div>
+        {typeof itinerary.budget === 'number' && itinerary.budget > 0 && (
+          <div className="itinerary-dates" style={{ marginTop: 6 }}>💰 预算（AI预测）：¥{Math.round(itinerary.budget)}</div>
+        )}
       </div>
       <div className="itinerary-days">
-        {itinerary.days.map((day) => (
+        {(typeof singleDayIndex === 'number' ? [itinerary.days[singleDayIndex]].filter(Boolean) : itinerary.days).map((day) => (
           <div key={day.day_index} className="itinerary-day">
             <div className="day-header" onClick={() => toggleDay(day.day_index)}>
               <div className="day-title">第 {day.day_index} 天</div>
-              <button className="day-toggle" type="button">{openDays[day.day_index] ? '收起' : '展开'}</button>
+              {typeof singleDayIndex !== 'number' && (
+                <button className="day-toggle" type="button">{openDays[day.day_index] ? '收起' : '展开'}</button>
+              )}
             </div>
-            {openDays[day.day_index] && (
+            {(typeof singleDayIndex === 'number' ? true : openDays[day.day_index]) && (
               <div className="segments">
                 {day.segments.map((seg, i) => {
                   const time = formatTime(seg);

@@ -3,6 +3,9 @@ export interface GenerateItineraryInput {
   start_date: string; // ISO yyyy-mm-dd
   end_date: string;   // ISO yyyy-mm-dd
   preferences?: Record<string, unknown> | null;
+  // Optional inputs to guide generation
+  party_size?: number;
+  budget?: number | null;
 }
 
 export interface DaySegment {
@@ -23,6 +26,9 @@ export interface GeneratedItinerary {
   start_date: string;
   end_date: string;
   days: { day_index: number; segments: DaySegment[] }[];
+  // Optional fields predicted or echoed by the model
+  budget?: number;
+  party_size?: number;
 }
 
 export interface LLMClient {

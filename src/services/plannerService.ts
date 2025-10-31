@@ -140,7 +140,11 @@ export class PlannerService {
         });
         const ensuredSegments = normalizedSegments.length > 0 ? normalizedSegments : [{ title: '自由活动', timeRange: '09:00-18:00', notes: '未提供具体安排' }];
         return { day_index, segments: ensuredSegments };
-      })
+      }),
+      party_size: typeof it.party_size === 'number' && it.party_size > 0
+        ? it.party_size
+        : (typeof input.party_size === 'number' && input.party_size > 0 ? input.party_size : undefined),
+      budget: typeof it.budget === 'number' && it.budget > 0 ? it.budget : undefined
     };
     return out;
   }

@@ -2,20 +2,25 @@ import React, { useState } from 'react';
 import { api } from '../api';
 import Card from '../components/Card';
 import Input from '../components/Input';
+import DatePicker from '../components/DatePicker';
 import Button from '../components/Button';
 import MapView from '../components/MapView';
-import BudgetView from '../components/BudgetView';
 import ItineraryView from '../components/ItineraryView';
 
-type Itinerary = { destination: string; start_date: string; end_date: string; days: any[] };
+type Itinerary = { destination: string; start_date: string; end_date: string; days: any[]; budget?: number; party_size?: number };
 
 export default function PlanNew() {
   const [destination, setDestination] = useState('Hangzhou');
-  const [start_date, setStart] = useState('2025-05-01');
-  const [end_date, setEnd] = useState('2025-05-02');
+  // 默认开始日期为今天、结束日期为次日
+  const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
+  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const today = new Date();
+  const defaultStart = fmt(today);
+  const defaultEnd = fmt(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1));
+  const [start_date, setStart] = useState(defaultStart);
+  const [end_date, setEnd] = useState(defaultEnd);
   const [preferencesText, setPreferencesText] = useState('');
   const [result, setResult] = useState<any>(null);
-  const [budget, setBudget] = useState<any>(null);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -37,6 +42,8 @@ export default function PlanNew() {
   const MAX_RECORD_SEC = 60;
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [baiduAk, setBaiduAk] = useState<string | undefined>();
+  const [partySize, setPartySize] = useState<number | ''>(1);
+  const [budgetHint, setBudgetHint] = useState<number | ''>('');
 
   React.useEffect(() => {
     (async () => {
@@ -53,12 +60,13 @@ export default function PlanNew() {
     e.preventDefault();
     setMsg('');
     setResult(null);
-    setBudget(null);
     setLoading(true);
     const payload: any = { destination, start_date, end_date };
     if (preferencesText && preferencesText.trim()) {
       payload.preferences = { notes: preferencesText.trim() };
     }
+    if (partySize !== '' && Number(partySize) > 0) payload.party_size = Number(partySize);
+    if (budgetHint !== '' && Number(budgetHint) > 0) payload.budget = Number(budgetHint);
     const gen = await api<Itinerary>('/planner/generate', {
       method: 'POST',
       body: JSON.stringify(payload)
@@ -69,12 +77,7 @@ export default function PlanNew() {
       return;
     }
     setResult(gen.data);
-    const est = await api<any>('/budget/estimate', {
-      method: 'POST',
-      body: JSON.stringify({ destination, start_date, end_date, party_size: 2, itinerary: gen.data })
-    });
     setLoading(false);
-    if (est.data) setBudget(est.data);
   };
 
   const startRecording = async () => {
@@ -162,14 +165,18 @@ export default function PlanNew() {
   };
 
   return (
-    <div className="container" style={{ maxWidth: 980 }}>
+    <div className="container" style={{ maxWidth: 1180 }}>
       <div className="grid two">
         <Card title="新建行程">
           <form onSubmit={onGenerate} className="stack">
             <Input label="目的地" placeholder="目的地" value={destination} onChange={e => setDestination(e.target.value)} />
             <div className="grid two">
-              <Input label="开始日期" placeholder="YYYY-MM-DD" value={start_date} onChange={e => setStart(e.target.value)} />
-              <Input label="结束日期" placeholder="YYYY-MM-DD" value={end_date} onChange={e => setEnd(e.target.value)} />
+              <DatePicker label="开始日期" value={start_date} onChange={v => setStart(v)} />
+              <DatePicker label="结束日期" value={end_date} onChange={v => setEnd(v)} />
+            </div>
+            <div className="grid two">
+              <Input label="预算（可选）" type="number" placeholder="不填则由AI预测" value={budgetHint} onChange={e => setBudgetHint(Number((e.target as HTMLInputElement).value) || '')} />
+              <Input label="同行人数" type="number" placeholder="默认1人" value={partySize} onChange={e => setPartySize(Number((e.target as HTMLInputElement).value) || '')} />
             </div>
             <div className="stack">
               <div className="label">偏好（可选）</div>
@@ -182,32 +189,35 @@ export default function PlanNew() {
               />
             </div>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <Button type="submit" variant="primary" disabled={loading}>{loading ? '生成中...' : '生成行程并估算预算'}</Button>
+              <Button type="submit" variant="primary" disabled={loading}>{loading ? '生成中...' : '生成行程'}</Button>
               {msg && <span className="note">{msg}</span>}
             </div>
-            <div className="note">生成后将自动调用预算估算。</div>
+            <div className="note">提示：若未填写预算，AI 将在生成行程时一并预测总预算。</div>
           </form>
         </Card>
 
         <Card title="语音识别（录音/上传）">
           <div className="stack">
-            <div className="stack" style={{ gap: 8 }}>
-              <div className="row" style={{ alignItems: 'center', gap: 12 }}>
+            <div className="row" style={{ alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <div className="label">录音控制</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <Button type="button" variant="primary" onClick={recording ? stopRecording : startRecording}>
                   {recording ? '停止录音' : '开始录音'}
                 </Button>
                 <span className="note" style={{ minWidth: 160 }}>
                   {recording ? `录音中… ${Math.floor(recordMs / 1000)}s / ${MAX_RECORD_SEC}s` : (audioFile ? `已生成：${audioFile.name}` : '尚未生成音频')}
                 </span>
-                <div style={{ width: 120, height: 8, background: '#1b2545', borderRadius: 4, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                  <div style={{ width: `${Math.min(100, Math.round((recordMs / 1000) / MAX_RECORD_SEC * 100))}%`, height: '100%', background: '#4caf50' }} />
+                <div style={{ width: 120, height: 8, background: '#1b2545', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <div style={{ width: `${Math.min(100, Math.round((recordMs / 1000) / MAX_RECORD_SEC * 100))}%`, height: '100%', background: '#60a5fa' }} />
                 </div>
-                <div style={{ width: 80, height: 8, background: '#222', borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.round(volume * 100)}%`, height: '100%', background: recording ? '#4caf50' : '#555' }} />
+                <div style={{ width: 80, height: 8, background: '#1b2545', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <div style={{ width: `${Math.round(volume * 100)}%`, height: '100%', background: recording ? '#22c55e' : '#555' }} />
                 </div>
               </div>
-              <div className="row" style={{ alignItems: 'center', gap: 12 }}>
-                <span className="label">或上传文件</span>
+            </div>
+            <div className="row" style={{ alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <div className="label">上传文件</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <input type="file" accept="audio/*" onChange={e => {
                   const f = e.target.files?.[0] ?? null;
                   setAudioFile(f);
@@ -217,53 +227,55 @@ export default function PlanNew() {
                   } catch {}
                 }} />
                 {audioUrl && (
-                  <audio controls src={audioUrl} style={{ maxWidth: 260 }} />
+                  <audio controls src={audioUrl} style={{ maxWidth: 240 }} />
                 )}
               </div>
             </div>
-            <div className="row" style={{ alignItems: 'center', gap: 12 }}>
+            <div className="row" style={{ alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <div className="label">语言</div>
               <select value={language} onChange={e => setLanguage(e.target.value)}>
                 <option value="zh-CN">中文（zh-CN）</option>
                 <option value="en-US">英语（en-US）</option>
               </select>
             </div>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <Button type="button" onClick={async () => {
-                setSpeechMsg('');
-                setSpeechText('');
-                setSpeechConfidence(null);
-                if (!audioFile || recording) {
-                  setSpeechMsg('请先选择音频文件');
-                  return;
-                }
-                try {
-                  const form = new FormData();
-                  form.append('audio', audioFile);
-                  form.append('language', language);
-                  const token = localStorage.getItem('token');
-                  const res = await fetch('/speech/recognize', {
-                    method: 'POST',
-                    body: form,
-                    headers: token ? { Authorization: `Bearer ${token}` } : undefined
-                  });
-                  const json = await res.json();
-                  if (res.ok && json?.data) {
-                    setSpeechText(json.data.text || '');
-                    setSpeechConfidence(typeof json.data.confidence === 'number' ? json.data.confidence : null);
-                  } else {
-                    setSpeechMsg(json?.message || '识别失败');
+            <div className="row" style={{ alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <div className="label">识别操作</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <Button type="button" onClick={async () => {
+                  setSpeechMsg('');
+                  setSpeechText('');
+                  setSpeechConfidence(null);
+                  if (!audioFile || recording) {
+                    setSpeechMsg('请先选择音频文件');
+                    return;
                   }
-                } catch (err: any) {
-                  setSpeechMsg('识别调用异常');
-                }
-              }}>识别当前音频</Button>
-              {speechMsg && <span className="note">{speechMsg}</span>}
+                  try {
+                    const form = new FormData();
+                    form.append('audio', audioFile);
+                    form.append('language', language);
+                    const token = localStorage.getItem('token');
+                    const res = await fetch('/speech/recognize', {
+                      method: 'POST',
+                      body: form,
+                      headers: token ? { Authorization: `Bearer ${token}` } : undefined
+                    });
+                    const json = await res.json();
+                    if (res.ok && json?.data) {
+                      setSpeechText(json.data.text || '');
+                      setSpeechConfidence(typeof json.data.confidence === 'number' ? json.data.confidence : null);
+                    } else {
+                      setSpeechMsg(json?.message || '识别失败');
+                    }
+                  } catch (err: any) {
+                    setSpeechMsg('识别调用异常');
+                  }
+                }}>识别当前音频</Button>
+                {speechMsg && <span className="note">{speechMsg}</span>}
+              </div>
             </div>
             {(speechText || speechConfidence != null) && (
               <div className="stack">
-                <div className="kpi">识别文本：{speechText || '(空)'}</div>
-                {speechConfidence != null && <div className="note">置信度：{Math.round(speechConfidence * 100)}%</div>}
+                <div className="kpi">识别文本：{speechText || '(空)'}{speechConfidence != null ? ` · 置信度：${Math.round(speechConfidence * 100)}%` : ''}</div>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                   <Button type="button" onClick={() => {
                     if (speechText && speechText.trim()) {
@@ -284,20 +296,18 @@ export default function PlanNew() {
         </Card>
 
         {result && (
-          <>
-            <ItineraryView itinerary={result} />
-            <div className="spacer" />
-            <MapView itinerary={result} apiKey={baiduAk} />
-          </>
+          <div className="stack" style={{ gridColumn: '1 / -1', gap: 16 }}>
+            {result.days.map((d: any, idx: number) => (
+              <div key={idx} className="grid two">
+                <ItineraryView itinerary={result} singleDayIndex={idx} />
+                <MapView itinerary={result} apiKey={baiduAk} dayIndex={idx} hideControls={true} />
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      {budget && (
-        <>
-          <div className="spacer" />
-          <BudgetView estimate={budget} />
-        </>
-      )}
+
     </div>
   );
 }
