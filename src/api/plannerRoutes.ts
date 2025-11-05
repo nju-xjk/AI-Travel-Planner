@@ -26,6 +26,17 @@ export function createPlannerRouter(_db: DB): express.Router {
     }
   });
 
+  // Extract itinerary-related fields from free text
+  router.post('/extract', async (req, res, next) => {
+    try {
+      const text = (req.body?.text as string) || '';
+      const data = await planner.extractFieldsFromText(text);
+      return res.status(200).json({ data });
+    } catch (err: any) {
+      next(err);
+    }
+  });
+
   return router;
 }
 

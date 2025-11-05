@@ -28,9 +28,12 @@ export default function PlanNew() {
   const [speechText, setSpeechText] = useState<string>('');
   const [speechConfidence, setSpeechConfidence] = useState<number | null>(null);
   const [speechMsg, setSpeechMsg] = useState<string>('');
-  const [speechStage, setSpeechStage] = useState<'initial' | 'recording' | 'recorded' | 'upload'>('initial');
+  const [speechStage, setSpeechStage] = useState<'initial' | 'recording' | 'recorded' | 'upload' | 'edit' | 'error'>('initial');
   const [recognizing, setRecognizing] = useState(false);
   const uploadInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [editableText, setEditableText] = useState('');
+  const [speechSource, setSpeechSource] = useState<'record' | 'upload' | null>(null);
+  const [extracting, setExtracting] = useState(false);
   const [recording, setRecording] = useState(false);
   const recorderRef = React.useRef<MediaRecorder | null>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
@@ -64,6 +67,10 @@ export default function PlanNew() {
     setMsg('');
     setResult(null);
     setLoading(true);
+    await generateCurrent();
+  };
+
+  const generateCurrent = async () => {
     const payload: any = { destination, start_date, end_date };
     if (preferencesText && preferencesText.trim()) {
       payload.preferences = { notes: preferencesText.trim() };
@@ -87,6 +94,7 @@ export default function PlanNew() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+      setSpeechSource('record');
       // setup audio context for volume meter
       try {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -193,9 +201,12 @@ export default function PlanNew() {
       });
       const json = await res.json();
       if (res.ok && json?.data) {
-        setSpeechText(json.data.text || '');
+        const txt = json.data.text || '';
+        setSpeechText(txt);
+        setEditableText(txt);
         setSpeechConfidence(typeof json.data.confidence === 'number' ? json.data.confidence : null);
-        setSpeechMsg('识别完成');
+        setSpeechMsg('识别完成，可编辑文本');
+        setSpeechStage('edit');
       } else {
         setSpeechMsg(json?.message || '识别失败');
       }
@@ -203,6 +214,63 @@ export default function PlanNew() {
       setSpeechMsg('识别调用异常');
     } finally {
       setRecognizing(false);
+    }
+  };
+
+  const applyExtractedFields = (fields: any) => {
+    if (typeof fields?.destination === 'string' && fields.destination.trim()) setDestination(fields.destination.trim());
+    if (typeof fields?.start_date === 'string' && fields.start_date.trim()) setStart(fields.start_date.trim());
+    if (typeof fields?.end_date === 'string' && fields.end_date.trim()) setEnd(fields.end_date.trim());
+    if (typeof fields?.party_size === 'number' && fields.party_size > 0) setPartySize(fields.party_size);
+    if (typeof fields?.budget === 'number' && fields.budget > 0) setBudgetHint(fields.budget);
+    if (typeof fields?.notes === 'string' && fields.notes.trim()) setPreferencesText(prev => prev ? `${prev}\n${fields.notes.trim()}` : fields.notes.trim());
+  };
+
+  const handleReInput = () => {
+    if (speechSource === 'record') {
+      startRecording();
+    } else {
+      uploadInputRef.current?.click();
+    }
+  };
+
+  const generateInfoFromText = async () => {
+    setSpeechMsg('');
+    setExtracting(true);
+    try {
+      const resp = await fetch('/planner/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: editableText })
+      });
+      const json = await resp.json();
+      if (!resp.ok || !json?.data) {
+        setSpeechMsg(json?.message || '文本提取失败');
+        setSpeechStage('error');
+        return;
+      }
+      const data = json.data;
+      if (data.coverage === 'none') {
+        setSpeechMsg('识别的内容与行程信息无关，请重新录音/上传音频');
+        setSpeechStage('error');
+        return;
+      }
+      // 填充已识别字段
+      applyExtractedFields(data);
+      if (data.coverage === 'full') {
+        setSpeechMsg('识别成功，正在生成行程信息');
+        setLoading(true);
+        await generateCurrent();
+        setSpeechStage('initial');
+      } else {
+        setSpeechMsg('识别成功，但信息不完整，请在左侧进行信息补全');
+        // 等待用户点击“我已知晓，退出此次识别”
+      }
+    } catch (e: any) {
+      setSpeechMsg('文本提取调用异常');
+      setSpeechStage('error');
+    } finally {
+      setExtracting(false);
     }
   };
 
@@ -347,6 +415,36 @@ export default function PlanNew() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {speechStage === 'edit' && (
+              <div className="speech-module" style={{ width: '100%', alignItems: 'center' }}>
+                <div className="speech-row" style={{ width: '100%', justifyContent: 'center' }}>
+                  <textarea
+                    rows={6}
+                    value={editableText}
+                    onChange={e => setEditableText(e.target.value)}
+                    style={{ width: 'min(720px, 95%)', padding: 10, borderRadius: 12, border: '1px solid var(--border)', background: 'transparent', color: 'var(--fg)' }}
+                    placeholder="可在此编辑识别文本"
+                  />
+                </div>
+                <div className="speech-actions">
+                  <Button type="button" onClick={handleReInput}>{speechSource === 'upload' ? '重新上传' : '重新录音'}</Button>
+                  <Button type="button" onClick={() => setSpeechStage('initial')}>退出</Button>
+                  <Button type="button" variant="primary" disabled={extracting || !editableText.trim()} onClick={generateInfoFromText}>{extracting ? '提取中…' : '生成行程信息'}</Button>
+                </div>
+                {speechMsg && <span className="note">{speechMsg}</span>}
+              </div>
+            )}
+
+            {speechStage === 'error' && (
+              <div className="speech-module">
+                <div className="kpi">{speechMsg || '识别的内容与行程信息无关，请重新录音/上传音频'}</div>
+                <div className="speech-actions">
+                  <Button type="button" onClick={handleReInput}>{speechSource === 'upload' ? '重新上传' : '重新录音'}</Button>
+                  <Button type="button" onClick={() => setSpeechStage('initial')}>退出</Button>
+                </div>
               </div>
             )}
           </div>

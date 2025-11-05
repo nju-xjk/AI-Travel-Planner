@@ -4,6 +4,17 @@ import { BailianLLMClient } from './llm/bailianClient';
 import { validateItinerary } from '../schemas/itinerary';
 import { metrics } from '../observability/metrics';
 
+type ExtractCoverage = 'none' | 'partial' | 'full';
+export interface ExtractedFields {
+  destination?: string;
+  start_date?: string;
+  end_date?: string;
+  party_size?: number;
+  budget?: number;
+  notes?: string;
+  coverage: ExtractCoverage;
+}
+
 function calculateDaysCount(start: string, end: string): number {
   const s = new Date(start + 'T00:00:00Z');
   const e = new Date(end + 'T00:00:00Z');
@@ -147,5 +158,122 @@ export class PlannerService {
       budget: typeof it.budget === 'number' && it.budget > 0 ? it.budget : undefined
     };
     return out;
+  }
+
+  private stripCodeFences(text: string): string {
+    return String(text || '')
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/\s*```\s*$/i, '')
+      .trim();
+  }
+
+  async extractFieldsFromText(rawText: string): Promise<ExtractedFields> {
+    const text = (rawText || '').trim();
+    if (!text) {
+      return { coverage: 'none' };
+    }
+    const cfg = this.settings.getSettings();
+    const apiKey = (cfg as any).BAILIAN_API_KEY;
+    if (!apiKey || typeof apiKey !== 'string' || apiKey.trim() === '') {
+      // Fallback: very lightweight regex-based extraction when API key missing
+      const fields: ExtractedFields = { coverage: 'none' };
+      const destMatch = text.match(/目的地[:：]\s*([\u4e00-\u9fa5A-Za-z\s]+)/);
+      const dateMatch = text.match(/(\d{4}-\d{2}-\d{2}).{0,10}(\d{4}-\d{2}-\d{2})/);
+      const partyMatch = text.match(/(同行人数|人数)[:：]?\s*(\d+)/);
+      const budgetMatch = text.match(/(预算|总预算)[:：]?\s*(\d+)/);
+      if (destMatch) fields.destination = destMatch[1].trim();
+      if (dateMatch) { fields.start_date = dateMatch[1]; fields.end_date = dateMatch[2]; }
+      if (partyMatch) fields.party_size = Number(partyMatch[2]);
+      if (budgetMatch) fields.budget = Number(budgetMatch[2]);
+      fields.notes = text;
+      const hasCore = !!(fields.destination && fields.start_date && fields.end_date && fields.party_size);
+      const hasAny = !!(fields.destination || fields.start_date || fields.end_date || fields.party_size || fields.budget);
+      fields.coverage = hasCore ? 'full' : (hasAny ? 'partial' : 'none');
+      return fields;
+    }
+
+    const fetchFn = (global as any).fetch as typeof globalThis.fetch;
+    if (typeof fetchFn !== 'function') {
+      throw Object.assign(new Error('fetch not available in Node runtime'), { code: 'BAD_GATEWAY' });
+    }
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    };
+
+    const prompt = [
+      '请阅读以下用户文本，严格输出一个 JSON 对象（不要任何解释）。',
+      '字段：destination, start_date, end_date, party_size, budget, notes, coverage。',
+      'notes 为除结构化字段外的补充信息（可为空字符串）。',
+      '日期格式必须为 yyyy-mm-dd。party_size 为数字。budget 为数字（CNY）。',
+      'coverage 为 none|partial|full：',
+      '- full：文本包含目的地、开始日期、结束日期、同行人数四项；',
+      '- partial：包含部分关键字段但不完整；',
+      '- none：与行程无关或无法提取。',
+      '禁止使用占位符(如???/N/A)。若未知请省略字段或设为空字符串。',
+      '',
+      '用户文本：',
+      text
+    ].join('\n');
+
+    const chatUrl = 'https://dashscope.aliyuncs.com/compatible/v1/chat/completions';
+    const chatBody = {
+      model: 'qwen-turbo',
+      messages: [
+        { role: 'system', content: '你是信息抽取助手。只输出严格 JSON，字段如说明。' },
+        { role: 'user', content: prompt }
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.1
+    } as any;
+
+    const extractRaw = (json: any): string => {
+      const candidates: any[] = [
+        json?.choices?.[0]?.message?.content,
+        json?.output_text,
+        json?.output?.text,
+        json?.output?.choices?.[0]?.message?.content,
+        typeof json?.output === 'object' ? JSON.stringify(json.output) : json?.output,
+      ].filter((v) => v != null);
+      for (const c of candidates) {
+        if (typeof c === 'string' && c.trim()) return c;
+      }
+      throw Object.assign(new Error('bailian response missing output text'), { code: 'BAD_GATEWAY' });
+    };
+
+    const tryParse = (raw: string): any => {
+      const cleaned = this.stripCodeFences(raw);
+      try { return JSON.parse(cleaned); } catch {}
+      const m = cleaned.match(/\{[\s\S]*\}/);
+      if (m) return JSON.parse(m[0]);
+      throw Object.assign(new Error('failed to parse JSON from bailian output'), { code: 'BAD_GATEWAY' });
+    };
+
+    try {
+      const resp = await fetchFn(chatUrl, { method: 'POST', headers, body: JSON.stringify(chatBody) });
+      if (!resp.ok) {
+        const textBody = await resp.text().catch(() => '');
+        throw Object.assign(new Error(`bailian chat http ${resp.status}: ${textBody?.slice(0, 200)}`), { code: resp.status >= 500 ? 'BAD_GATEWAY' : 'BAD_REQUEST' });
+      }
+      const json: any = await resp.json().catch(() => null);
+      if (!json) throw Object.assign(new Error('bailian chat response not json'), { code: 'BAD_GATEWAY' });
+      const raw = extractRaw(json);
+      const parsed = tryParse(raw);
+      const fields: ExtractedFields = {
+        destination: typeof parsed?.destination === 'string' ? parsed.destination.trim() : undefined,
+        start_date: typeof parsed?.start_date === 'string' ? parsed.start_date.trim() : undefined,
+        end_date: typeof parsed?.end_date === 'string' ? parsed.end_date.trim() : undefined,
+        party_size: typeof parsed?.party_size === 'number' ? parsed.party_size : undefined,
+        budget: typeof parsed?.budget === 'number' ? parsed.budget : undefined,
+        notes: typeof parsed?.notes === 'string' ? parsed.notes : '',
+        coverage: (parsed?.coverage === 'full' || parsed?.coverage === 'partial') ? parsed.coverage : 'none'
+      };
+      return fields;
+    } catch (e: any) {
+      // Fallback: treat as none
+      console.warn('[PlannerService] extractFieldsFromText failed:', e?.message || e);
+      return { coverage: 'none' };
+    }
   }
 }
