@@ -28,6 +28,9 @@ export default function PlanNew() {
   const [speechText, setSpeechText] = useState<string>('');
   const [speechConfidence, setSpeechConfidence] = useState<number | null>(null);
   const [speechMsg, setSpeechMsg] = useState<string>('');
+  const [speechStage, setSpeechStage] = useState<'initial' | 'recording' | 'recorded' | 'upload'>('initial');
+  const [recognizing, setRecognizing] = useState(false);
+  const uploadInputRef = React.useRef<HTMLInputElement | null>(null);
   const [recording, setRecording] = useState(false);
   const recorderRef = React.useRef<MediaRecorder | null>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
@@ -142,9 +145,14 @@ export default function PlanNew() {
           try { audioCtxRef.current.close(); } catch {}
           audioCtxRef.current = null;
         }
+        setSpeechStage('recorded');
       };
       recorderRef.current = rec;
       rec.start();
+      setSpeechMsg('');
+      setSpeechText('');
+      setSpeechConfidence(null);
+      setSpeechStage('recording');
       setRecording(true);
       setRecordMs(0);
       timerRef.current = window.setInterval(() => setRecordMs(prev => prev + 100), 100);
@@ -161,6 +169,40 @@ export default function PlanNew() {
   const stopRecording = () => {
     if (recorderRef.current && recorderRef.current.state !== 'inactive') {
       recorderRef.current.stop();
+    }
+  };
+
+  const recognizeCurrentAudio = async () => {
+    setSpeechMsg('');
+    setSpeechText('');
+    setSpeechConfidence(null);
+    if (!audioFile || recording) {
+      setSpeechMsg('请先选择或生成音频');
+      return;
+    }
+    try {
+      setRecognizing(true);
+      const form = new FormData();
+      form.append('audio', audioFile);
+      form.append('language', language);
+      const token = localStorage.getItem('token');
+      const res = await fetch('/speech/recognize', {
+        method: 'POST',
+        body: form,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
+      });
+      const json = await res.json();
+      if (res.ok && json?.data) {
+        setSpeechText(json.data.text || '');
+        setSpeechConfidence(typeof json.data.confidence === 'number' ? json.data.confidence : null);
+        setSpeechMsg('识别完成');
+      } else {
+        setSpeechMsg(json?.message || '识别失败');
+      }
+    } catch (err: any) {
+      setSpeechMsg('识别调用异常');
+    } finally {
+      setRecognizing(false);
     }
   };
 
@@ -196,102 +238,118 @@ export default function PlanNew() {
           </form>
         </Card>
 
-        <Card title="语音识别（录音/上传）">
-          <div className="stack">
-            <div className="row" style={{ alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <div className="label">录音控制</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <Button type="button" variant="primary" onClick={recording ? stopRecording : startRecording}>
-                  {recording ? '停止录音' : '开始录音'}
-                </Button>
-                <span className="note" style={{ minWidth: 160 }}>
-                  {recording ? `录音中… ${Math.floor(recordMs / 1000)}s / ${MAX_RECORD_SEC}s` : (audioFile ? `已生成：${audioFile.name}` : '尚未生成音频')}
-                </span>
-                <div style={{ width: 120, height: 8, background: '#1b2545', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                  <div style={{ width: `${Math.min(100, Math.round((recordMs / 1000) / MAX_RECORD_SEC * 100))}%`, height: '100%', background: '#60a5fa' }} />
+        <Card title="语音识别">
+          <div className="speech-card">
+          <div className="speech-stage">
+            {speechStage === 'initial' && (
+              <div className="speech-module">
+                <div className="speech-actions">
+                  <button type="button" className="circle-btn circle-primary" onClick={startRecording} disabled={recording}>开始录音</button>
+                  <button type="button" className="circle-btn circle-secondary" onClick={() => uploadInputRef.current?.click()}>音频上传</button>
                 </div>
-                <div style={{ width: 80, height: 8, background: '#1b2545', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                  <div style={{ width: `${Math.round(volume * 100)}%`, height: '100%', background: recording ? '#22c55e' : '#555' }} />
-                </div>
-              </div>
-            </div>
-            <div className="row" style={{ alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <div className="label">上传文件</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <input type="file" accept="audio/*" onChange={e => {
+                <input ref={uploadInputRef} type="file" accept="audio/*" style={{ display: 'none' }} onChange={e => {
                   const f = e.target.files?.[0] ?? null;
                   setAudioFile(f);
+                  setSpeechMsg('');
+                  setSpeechText('');
+                  setSpeechConfidence(null);
                   try {
                     if (audioUrl) URL.revokeObjectURL(audioUrl);
                     setAudioUrl(f ? URL.createObjectURL(f) : null);
                   } catch {}
+                  setSpeechStage(f ? 'upload' : 'initial');
                 }} />
-                {audioUrl && (
-                  <audio controls src={audioUrl} style={{ maxWidth: 240 }} />
-                )}
               </div>
-            </div>
-            <div className="row" style={{ alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <div className="label">语言</div>
-              <select value={language} onChange={e => setLanguage(e.target.value)}>
-                <option value="zh-CN">中文（zh-CN）</option>
-                <option value="en-US">英语（en-US）</option>
-              </select>
-            </div>
-            <div className="row" style={{ alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <div className="label">识别操作</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <Button type="button" onClick={async () => {
-                  setSpeechMsg('');
-                  setSpeechText('');
-                  setSpeechConfidence(null);
-                  if (!audioFile || recording) {
-                    setSpeechMsg('请先选择音频文件');
-                    return;
-                  }
-                  try {
-                    const form = new FormData();
-                    form.append('audio', audioFile);
-                    form.append('language', language);
-                    const token = localStorage.getItem('token');
-                    const res = await fetch('/speech/recognize', {
-                      method: 'POST',
-                      body: form,
-                      headers: token ? { Authorization: `Bearer ${token}` } : undefined
-                    });
-                    const json = await res.json();
-                    if (res.ok && json?.data) {
-                      setSpeechText(json.data.text || '');
-                      setSpeechConfidence(typeof json.data.confidence === 'number' ? json.data.confidence : null);
-                    } else {
-                      setSpeechMsg(json?.message || '识别失败');
-                    }
-                  } catch (err: any) {
-                    setSpeechMsg('识别调用异常');
-                  }
-                }}>识别当前音频</Button>
-                {speechMsg && <span className="note">{speechMsg}</span>}
-              </div>
-            </div>
-            {(speechText || speechConfidence != null) && (
-              <div className="stack">
-                <div className="kpi">识别文本：{speechText || '(空)'}{speechConfidence != null ? ` · 置信度：${Math.round(speechConfidence * 100)}%` : ''}</div>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <Button type="button" onClick={() => {
-                    if (speechText && speechText.trim()) {
-                      setDestination(speechText.trim());
-                      setSpeechMsg('已填充到目的地');
-                    }
-                  }}>填充到目的地</Button>
-                  <Button type="button" onClick={() => {
-                    if (speechText && speechText.trim()) {
-                      setPreferencesText(prev => (prev ? `${prev}\n${speechText.trim()}` : speechText.trim()));
-                      setSpeechMsg('已追加到偏好');
-                    }
-                  }}>追加到偏好</Button>
+            )}
+
+            {speechStage === 'recording' && (
+              <div className="speech-module">
+                <div className="speech-timer">录音中… {Math.floor(recordMs / 1000)}s / {MAX_RECORD_SEC}s</div>
+                <div className="wave-outer" style={{ width: 160 }}>
+                  <div className="wave-inner" style={{ width: `${Math.round(volume * 100)}%`, background: recording ? '#22c55e' : '#555' }} />
+                </div>
+                <div className="speech-actions">
+                  <button type="button" className="circle-btn circle-danger" onClick={stopRecording}>结束录音</button>
                 </div>
               </div>
             )}
+
+            {speechStage === 'recorded' && (
+              <div className="speech-module">
+                {audioUrl && <audio controls src={audioUrl} className="speech-player" />}
+                <div className="speech-actions">
+                  <Button type="button" variant="primary" disabled={recognizing || recording || !audioFile} onClick={recognizeCurrentAudio}>{recognizing ? '识别中…' : '识别当前音频'}</Button>
+                  <Button type="button" onClick={startRecording} disabled={recording}>重新录音</Button>
+                  <Button type="button" onClick={() => { setAudioFile(null); setAudioUrl(null); setSpeechText(''); setSpeechConfidence(null); setSpeechMsg(''); setSpeechStage('initial'); }}>退出录音</Button>
+                </div>
+                <div className="speech-row">
+                  <span className="label">语言</span>
+                  <select value={language} onChange={e => setLanguage(e.target.value)}>
+                    <option value="zh-CN">中文（zh-CN）</option>
+                    <option value="en-US">英语（en-US）</option>
+                  </select>
+                </div>
+                {speechMsg && <span className="note">{speechMsg}</span>}
+                {(speechText || speechConfidence != null) && (
+                  <div className="stack" style={{ alignItems: 'center' }}>
+                    <div className="kpi">识别文本：{speechText || '(空)'}{speechConfidence != null ? ` · 置信度：${Math.round(speechConfidence * 100)}%` : ''}</div>
+                    <div className="speech-actions">
+                      <Button type="button" onClick={() => {
+                        if (speechText && speechText.trim()) {
+                          setDestination(speechText.trim());
+                          setSpeechMsg('已填充到目的地');
+                        }
+                      }}>填充到目的地</Button>
+                      <Button type="button" onClick={() => {
+                        if (speechText && speechText.trim()) {
+                          setPreferencesText(prev => (prev ? `${prev}\n${speechText.trim()}` : speechText.trim()));
+                          setSpeechMsg('已追加到偏好');
+                        }
+                      }}>追加到偏好</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {speechStage === 'upload' && (
+              <div className="speech-module">
+                {audioUrl && <audio controls src={audioUrl} className="speech-player" />}
+                <div className="speech-actions">
+                  <Button type="button" variant="primary" disabled={recognizing || !audioFile} onClick={recognizeCurrentAudio}>{recognizing ? '识别中…' : '识别当前音频'}</Button>
+                  <Button type="button" onClick={() => uploadInputRef.current?.click()}>重新上传音频</Button>
+                  <Button type="button" onClick={() => { setAudioFile(null); setAudioUrl(null); setSpeechText(''); setSpeechConfidence(null); setSpeechMsg(''); setSpeechStage('initial'); }}>退出上传</Button>
+                </div>
+                <div className="speech-row">
+                  <span className="label">语言</span>
+                  <select value={language} onChange={e => setLanguage(e.target.value)}>
+                    <option value="zh-CN">中文（zh-CN）</option>
+                    <option value="en-US">英语（en-US）</option>
+                  </select>
+                </div>
+                {speechMsg && <span className="note">{speechMsg}</span>}
+                {(speechText || speechConfidence != null) && (
+                  <div className="stack" style={{ alignItems: 'center' }}>
+                    <div className="kpi">识别文本：{speechText || '(空)'}{speechConfidence != null ? ` · 置信度：${Math.round(speechConfidence * 100)}%` : ''}</div>
+                    <div className="speech-actions">
+                      <Button type="button" onClick={() => {
+                        if (speechText && speechText.trim()) {
+                          setDestination(speechText.trim());
+                          setSpeechMsg('已填充到目的地');
+                        }
+                      }}>填充到目的地</Button>
+                      <Button type="button" onClick={() => {
+                        if (speechText && speechText.trim()) {
+                          setPreferencesText(prev => (prev ? `${prev}\n${speechText.trim()}` : speechText.trim()));
+                          setSpeechMsg('已追加到偏好');
+                        }
+                      }}>追加到偏好</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           </div>
         </Card>
 

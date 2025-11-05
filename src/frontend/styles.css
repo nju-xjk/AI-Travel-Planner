@@ -146,6 +146,30 @@ body {
 
 .footer { color: var(--muted); text-align: center; padding: 20px 0; }
 
+/* Speech module staged UI */
+.speech-card { min-height: 360px; display: flex; align-items: center; justify-content: center; padding: 16px 0; }
+.speech-module { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.speech-stage { display: flex; flex-direction: column; align-items: center; gap: 18px; transition: opacity 0.2s ease, transform 0.2s ease; }
+.speech-actions { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
+.speech-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.speech-player { width: min(640px, 90%); }
+.circle-btn {
+  width: 84px; height: 84px; border-radius: 999px; border: 1px solid var(--border);
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #0a1020; color: var(--text);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  transition: transform 0.08s ease, box-shadow 0.2s ease, background 0.2s ease;
+  cursor: pointer;
+}
+.circle-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(0,0,0,0.45); }
+.circle-btn:active { transform: translateY(1px); }
+.circle-primary { background: linear-gradient(135deg, var(--primary), #60a5fa); color: #fff; border-color: rgba(59,130,246,0.45); }
+.circle-secondary { background: linear-gradient(135deg, #374151, #1f2937); color: #fff; border-color: rgba(31,41,55,0.6); }
+.circle-danger { background: linear-gradient(135deg, var(--danger), #f87171); color: #fff; border-color: rgba(239,68,68,0.55); }
+.circle-label { font-size: 12px; color: var(--muted); margin-top: 6px; text-align: center; }
+.wave-outer { width: 200px; height: 8px; background: #1b2545; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+.wave-inner { height: 100%; background: #22c55e; }
+
 /* Itinerary view */
 .itinerary-header {
   display: flex;
