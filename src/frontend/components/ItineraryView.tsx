@@ -77,6 +77,13 @@ export default function ItineraryView({ itinerary, singleDayIndex }: { itinerary
               <div className="segments">
                 {day.segments.map((seg, i) => {
                   const time = formatTime(seg);
+                  const displayNotes = (() => {
+                    const raw = (seg.notes || '').trim();
+                    if (!raw) return '';
+                    // 过滤后端注入的请求ID调试信息，避免污染用户界面
+                    const cleaned = raw.replace(/\breqId:[a-z0-9-]{8,}\b/i, '').trim();
+                    return cleaned;
+                  })();
                   return (
                     <div key={i} className="segment-card">
                       <div className="segment-icon" title={seg.type || 'other'}>{typeIcon(seg.type)}</div>
@@ -91,7 +98,7 @@ export default function ItineraryView({ itinerary, singleDayIndex }: { itinerary
                           )}
                           {typeof seg.costEstimate === 'number' && <span className="chip">¥{seg.costEstimate}</span>}
                         </div>
-                        {seg.notes && <div className="segment-notes">{seg.notes}</div>}
+                        {displayNotes && <div className="segment-notes">{displayNotes}</div>}
                       </div>
                     </div>
                   );
