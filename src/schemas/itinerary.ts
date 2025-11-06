@@ -17,7 +17,9 @@ export const DaySegmentSchema = z.object({
 
 export const ItineraryDaySchema = z.object({
   day_index: z.number().int().positive(),
-  segments: z.array(DaySegmentSchema).min(1)
+  segments: z.array(DaySegmentSchema).min(1),
+  // 后端计算的当天预算（CNY），可选
+  dayBudget: z.number().nonnegative().optional()
 });
 
 export const ItinerarySchema = z.object({

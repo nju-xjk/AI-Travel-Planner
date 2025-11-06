@@ -136,6 +136,11 @@ export class PlannerService {
       if (isPlaceholder(t)) return fallback;
       return t;
     };
+    // 先确定同行人数，用于预算计算（人均）
+    const partySize: number | undefined = (typeof it.party_size === 'number' && it.party_size > 0)
+      ? it.party_size
+      : (typeof input.party_size === 'number' && input.party_size > 0 ? input.party_size : undefined);
+
     const out: GeneratedItinerary = {
       destination: input.destination,
       start_date: typeof it.start_date === 'string' ? it.start_date : input.start_date,
@@ -150,11 +155,28 @@ export class PlannerService {
           return { ...s, title, location, notes };
         });
         const ensuredSegments = normalizedSegments.length > 0 ? normalizedSegments : [{ title: '自由活动', timeRange: '09:00-18:00', notes: '未提供具体安排' }];
-        return { day_index, segments: ensuredSegments };
+        // 计算当天预算：优先使用分段的 costEstimate（人均），否则使用配置系数估算
+        const cfg = this.settings.getSettings();
+        const perSegment = {
+          transport: cfg.BUDGET_COEFF_TRANSPORT ?? 50,
+          food: cfg.BUDGET_COEFF_FOOD ?? 60,
+          entertainment: cfg.BUDGET_COEFF_ENTERTAINMENT ?? 80,
+          accommodation: cfg.BUDGET_COEFF_ACCOMMODATION ?? 300,
+          shopping: cfg.BUDGET_COEFF_SHOPPING ?? 0,
+          other: cfg.BUDGET_COEFF_OTHER ?? 0,
+        } as Record<string, number>;
+        const ps = Number(partySize) > 0 ? Number(partySize) : 1;
+        const dayBudget = ensuredSegments.reduce((sum, seg: any) => {
+          const rawType = seg?.type ?? 'other';
+          const type = rawType === 'attraction' ? 'entertainment' : rawType;
+          if (Number.isFinite(seg?.costEstimate) && (seg.costEstimate as number) > 0) {
+            return sum + Number(seg.costEstimate) * ps;
+          }
+          return sum + (perSegment[type] ?? 0) * ps;
+        }, 0);
+        return { day_index, segments: ensuredSegments, dayBudget };
       }),
-      party_size: typeof it.party_size === 'number' && it.party_size > 0
-        ? it.party_size
-        : (typeof input.party_size === 'number' && input.party_size > 0 ? input.party_size : undefined),
+      party_size: partySize,
       budget: typeof it.budget === 'number' && it.budget > 0 ? it.budget : undefined
     };
     return out;

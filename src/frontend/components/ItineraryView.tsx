@@ -12,7 +12,7 @@ type DaySegment = {
   costEstimate?: number;
 };
 
-type ItineraryDay = { day_index: number; segments: DaySegment[] };
+type ItineraryDay = { day_index: number; segments: DaySegment[]; dayBudget?: number };
 
 type Itinerary = {
   destination: string;
@@ -56,15 +56,19 @@ export default function ItineraryView({ itinerary, singleDayIndex }: { itinerary
       <div className="itinerary-header">
         <div className="itinerary-title">📍 {itinerary.destination}</div>
         <div className="itinerary-dates">🗓️ {itinerary.start_date} → {itinerary.end_date}</div>
-        {typeof itinerary.budget === 'number' && itinerary.budget > 0 && (
-          <div className="itinerary-dates" style={{ marginTop: 6 }}>💰 预算（AI预测）：¥{Math.round(itinerary.budget)}</div>
-        )}
+        {/* 全局总预算不再显示，改为“当天预算”在各天标题处展示 */}
       </div>
       <div className="itinerary-days">
         {(typeof singleDayIndex === 'number' ? [itinerary.days[singleDayIndex]].filter(Boolean) : itinerary.days).map((day) => (
           <div key={day.day_index} className="itinerary-day">
             <div className="day-header" onClick={() => toggleDay(day.day_index)}>
               <div className="day-title">第 {day.day_index} 天</div>
+              {(() => {
+                const computed = typeof day.dayBudget === 'number' ? day.dayBudget : (day.segments || []).reduce((sum, s) => sum + (Number(s.costEstimate) > 0 ? Number(s.costEstimate) : 0), 0);
+                return computed > 0 ? (
+                  <div className="day-title" style={{ marginLeft: 'auto', fontWeight: 500 }}>💰 当天预算：¥{Math.round(computed)}</div>
+                ) : null;
+              })()}
               {typeof singleDayIndex !== 'number' && (
                 <button className="day-toggle" type="button">{openDays[day.day_index] ? '收起' : '展开'}</button>
               )}

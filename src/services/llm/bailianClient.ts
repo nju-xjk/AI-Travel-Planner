@@ -75,7 +75,7 @@ export class BailianLLMClient implements LLMClient {
       '你是一名行程规划助手，请严格输出一个 JSON（不要任何解释或附加文本）。',
       '字段必须为：destination, start_date, end_date, days, budget, party_size。',
       'days 为数组，长度等于行程天数；每个元素包含 day_index（从1开始递增）、segments（数组，至少1个）。',
-      'segments 每项包含至少 title；可选：startTime, endTime（格式HH:MM）、location, notes, type（transport|accommodation|food|entertainment|attraction|shopping|other）, costEstimate。',
+      'segments 每项至少包含 title，且必须包含 costEstimate（人均CNY，数字）；建议提供 type（transport|accommodation|food|entertainment|attraction|shopping|other）。可选：startTime, endTime（格式HH:MM）、location, notes。',
       '要求所有时间字段使用 24小时制 HH:MM。',
       '禁止输出任何占位符，如 ??? 或 N/A；若信息不确定，请填写 "未知"。',
       '请仅输出 JSON 内容，不要使用代码块或前后说明。',

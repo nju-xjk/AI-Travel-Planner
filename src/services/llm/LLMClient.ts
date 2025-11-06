@@ -25,7 +25,7 @@ export interface GeneratedItinerary {
   destination: string;
   start_date: string;
   end_date: string;
-  days: { day_index: number; segments: DaySegment[] }[];
+  days: { day_index: number; segments: DaySegment[]; dayBudget?: number }[];
   // Optional fields predicted or echoed by the model
   budget?: number;
   party_size?: number;
