@@ -195,6 +195,8 @@ export class PlannerService {
       '字段：destination, start_date, end_date, party_size, budget, notes, coverage。',
       'notes 为除结构化字段外的补充信息（可为空字符串）。',
       '日期格式必须为 yyyy-mm-dd。party_size 为数字。budget 为数字（CNY）。',
+      '若文本包含持续天数（如“5天”或“五天”），且存在出发日期，请自动计算结束日期为出发日期加【持续天数-1】天。',
+      '若用户仅说出日期未指明年份，则默认使用当前年份；若该日期在当前年份已过，则自动推算为下一年。',
       'coverage 为 none|partial|full：',
       '- full：文本包含目的地、开始日期、结束日期、同行人数四项；',
       '- partial：包含部分关键字段但不完整；',
@@ -205,15 +207,12 @@ export class PlannerService {
       text
     ].join('\n');
 
-    const chatUrl = 'https://dashscope.aliyuncs.com/compatible/v1/chat/completions';
-    const chatBody = {
+    // 改为仅使用标准生成接口，避免兼容聊天接口 404
+    const genUrl = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation';
+    const genBody = {
       model: 'qwen-turbo',
-      messages: [
-        { role: 'system', content: '你是信息抽取助手。只输出严格 JSON，字段如说明。' },
-        { role: 'user', content: prompt }
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.1
+      input: { prompt },
+      parameters: { result_format: 'json', temperature: 0.1 }
     } as any;
 
     const extractRaw = (json: any): string => {
@@ -239,13 +238,13 @@ export class PlannerService {
     };
 
     try {
-      const resp = await fetchFn(chatUrl, { method: 'POST', headers, body: JSON.stringify(chatBody) });
+      const resp = await fetchFn(genUrl, { method: 'POST', headers, body: JSON.stringify(genBody) });
       if (!resp.ok) {
         const textBody = await resp.text().catch(() => '');
-        throw Object.assign(new Error(`bailian chat http ${resp.status}: ${textBody?.slice(0, 200)}`), { code: resp.status >= 500 ? 'BAD_GATEWAY' : 'BAD_REQUEST' });
+        throw Object.assign(new Error(`bailian http ${resp.status}: ${textBody?.slice(0, 200)}`), { code: resp.status >= 500 ? 'BAD_GATEWAY' : 'BAD_REQUEST' });
       }
       const json: any = await resp.json().catch(() => null);
-      if (!json) throw Object.assign(new Error('bailian chat response not json'), { code: 'BAD_GATEWAY' });
+      if (!json) throw Object.assign(new Error('bailian response not json'), { code: 'BAD_GATEWAY' });
       const raw = extractRaw(json);
       const parsed = tryParse(raw);
       const fields: ExtractedFields = {
