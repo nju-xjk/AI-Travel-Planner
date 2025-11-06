@@ -7,6 +7,7 @@ type DatePickerProps = {
   name?: string;
   min?: string;
   max?: string;
+  error?: boolean;
 };
 
 function pad(n: number) { return n < 10 ? `0${n}` : String(n); }
@@ -21,7 +22,7 @@ function parse(value?: string): Date | null {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-export default function DatePicker({ label, value, onChange, name, min, max }: DatePickerProps) {
+export default function DatePicker({ label, value, onChange, name, min, max, error }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
   const selected = parse(value) || new Date();
   const [viewYear, setViewYear] = React.useState(selected.getFullYear());
@@ -73,7 +74,7 @@ export default function DatePicker({ label, value, onChange, name, min, max }: D
 
   return (
     <div className="stack" ref={containerRef} style={{ position: 'relative' }}>
-      {label && <div className="label">{label}</div>}
+      {label && <div className="label" style={error ? { color: '#e11d48' } : undefined}>{label}</div>}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <input
           className="input"
@@ -84,6 +85,7 @@ export default function DatePicker({ label, value, onChange, name, min, max }: D
           name={name}
           onClick={() => setOpen(true)}
           onFocus={() => setOpen(true)}
+          style={error ? { border: '1px solid #e11d48', boxShadow: '0 0 0 2px rgba(225,29,72,0.15)' } : undefined}
         />
       </div>
 

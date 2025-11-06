@@ -50,6 +50,7 @@ export default function PlanNew() {
   const [baiduAk, setBaiduAk] = useState<string | undefined>();
   const [partySize, setPartySize] = useState<number | ''>(1);
   const [budgetHint, setBudgetHint] = useState<number | ''>('');
+  const [fieldErrors, setFieldErrors] = useState<{ destination: boolean; start_date: boolean; end_date: boolean; party_size: boolean }>(() => ({ destination: false, start_date: false, end_date: false, party_size: false }));
 
   React.useEffect(() => {
     (async () => {
@@ -270,6 +271,21 @@ export default function PlanNew() {
         await generateCurrent();
         setSpeechStage('initial');
       } else {
+        // 当信息不完整时，清空缺失字段并标红提醒用户补全
+        const nextErrors = { destination: false, start_date: false, end_date: false, party_size: false };
+        const needDest = !(typeof data.destination === 'string' && data.destination.trim());
+        const needStart = !(typeof data.start_date === 'string' && data.start_date.trim());
+        const needEnd = !(typeof data.end_date === 'string' && data.end_date.trim());
+        const needParty = !(typeof data.party_size === 'number' && data.party_size > 0);
+        if (needDest) { setDestination(''); nextErrors.destination = true; }
+        else { nextErrors.destination = false; }
+        if (needStart) { setStart(''); nextErrors.start_date = true; }
+        else { nextErrors.start_date = false; }
+        if (needEnd) { setEnd(''); nextErrors.end_date = true; }
+        else { nextErrors.end_date = false; }
+        if (needParty) { setPartySize(''); nextErrors.party_size = true; }
+        else { nextErrors.party_size = false; }
+        setFieldErrors(nextErrors);
         setSpeechMsg('识别成功，但信息不完整，请在左侧进行信息补全');
         // 等待用户点击“我已知晓，退出此次识别”
       }
@@ -286,14 +302,14 @@ export default function PlanNew() {
       <div className="grid two">
         <Card title="新建行程">
           <form onSubmit={onGenerate} className="stack">
-            <Input label="目的地" placeholder="目的地" value={destination} onChange={e => setDestination(e.target.value)} />
+            <Input label="目的地" placeholder="目的地" value={destination} onChange={e => { setDestination(e.target.value); setFieldErrors(prev => ({ ...prev, destination: false })); }} error={fieldErrors.destination} />
             <div className="grid two">
-              <DatePicker label="开始日期" value={start_date} onChange={v => setStart(v)} />
-              <DatePicker label="结束日期" value={end_date} onChange={v => setEnd(v)} />
+              <DatePicker label="开始日期" value={start_date} onChange={v => { setStart(v); setFieldErrors(prev => ({ ...prev, start_date: false })); }} error={fieldErrors.start_date} />
+              <DatePicker label="结束日期" value={end_date} onChange={v => { setEnd(v); setFieldErrors(prev => ({ ...prev, end_date: false })); }} error={fieldErrors.end_date} />
             </div>
             <div className="grid two">
               <Input label="预算（可选）" type="number" placeholder="不填则由AI预测" value={budgetHint} onChange={e => setBudgetHint(Number((e.target as HTMLInputElement).value) || '')} />
-              <Input label="同行人数" type="number" placeholder="默认1人" value={partySize} onChange={e => setPartySize(Number((e.target as HTMLInputElement).value) || '')} />
+              <Input label="同行人数" type="number" placeholder="默认1人" value={partySize} onChange={e => { const val = Number((e.target as HTMLInputElement).value) || ''; setPartySize(val); setFieldErrors(prev => ({ ...prev, party_size: false })); }} error={fieldErrors.party_size} />
             </div>
             <div className="stack">
               <div className="label">偏好（可选）</div>
