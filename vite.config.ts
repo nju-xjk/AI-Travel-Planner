@@ -15,6 +15,7 @@ export default defineConfig({
       '/metrics': 'http://127.0.0.1:3000',
       '/health': 'http://127.0.0.1:3000',
       '/speech': 'http://127.0.0.1:3000',
+      '/plans': 'http://127.0.0.1:3000',
     },
   },
 });

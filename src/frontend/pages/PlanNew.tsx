@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import Card from '../components/Card';
 import Input from '../components/Input';
@@ -10,6 +11,7 @@ import ItineraryView from '../components/ItineraryView';
 type Itinerary = { destination: string; start_date: string; end_date: string; days: any[]; budget?: number; party_size?: number };
 
 export default function PlanNew() {
+  const navigate = useNavigate();
   const [destination, setDestination] = useState('Hangzhou');
   // 默认开始日期为今天、结束日期为次日
   const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
@@ -89,6 +91,19 @@ export default function PlanNew() {
     }
     setResult(gen.data);
     setLoading(false);
+  };
+
+  const onSavePlan = async () => {
+    if (!result) return;
+    const res = await api<{ id: number }>(
+      '/plans',
+      { method: 'POST', body: JSON.stringify({ itinerary: result }) }
+    );
+    if (!res.data) {
+      setMsg(res.message || '保存失败');
+      return;
+    }
+    navigate(`/plan/${res.data.id}`);
   };
 
   const startRecording = async () => {
@@ -476,6 +491,10 @@ export default function PlanNew() {
 
         {result && (
           <div className="stack" style={{ gridColumn: '1 / -1', gap: 16 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <Button type="button" variant="primary" onClick={onSavePlan}>保存行程</Button>
+              {msg && <span className="note">{msg}</span>}
+            </div>
             {result.days.map((d: any, idx: number) => (
               <div key={idx} className="grid two">
                 <ItineraryView itinerary={result} singleDayIndex={idx} />

@@ -12,6 +12,7 @@ import { createPlannerRouter } from './plannerRoutes';
 import { createBudgetRouter } from './budgetRoutes';
 import { createExpenseRouter } from './expenseRoutes';
 import { createSpeechRouter } from './speechRoutes';
+import { createPlanRouter } from './planRoutes';
 
 export interface ServerOptions {
   jwtSecret: string;
@@ -66,6 +67,7 @@ export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }
   app.use('/planner', createPlannerRouter(db));
   app.use('/budget', createBudgetRouter(db));
   app.use('/expenses', createExpenseRouter(db, { jwtSecret: opts.jwtSecret }));
+  app.use('/plans', createPlanRouter(db, { jwtSecret: opts.jwtSecret }));
   app.use('/settings', createSettingsRouter());
   app.use('/metrics', createMetricsRouter());
   app.use('/speech', createSpeechRouter());

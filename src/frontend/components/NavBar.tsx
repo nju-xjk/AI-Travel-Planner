@@ -35,6 +35,7 @@ export default function NavBar() {
               </>
             )}
             <NavLink to="/plan/new" className={({ isActive }) => isActive ? 'active' : ''}>新建行程</NavLink>
+            <NavLink to="/plans" className={({ isActive }) => isActive ? 'active' : ''}>我的行程</NavLink>
             <NavLink to="/expenses" className={({ isActive }) => isActive ? 'active' : ''}>费用</NavLink>
             <NavLink to="/settings" className={({ isActive }) => isActive ? 'active' : ''}>设置</NavLink>
           </div>

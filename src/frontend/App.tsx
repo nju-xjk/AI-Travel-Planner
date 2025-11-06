@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import PlanNew from './pages/PlanNew';
 import PlanShow from './pages/PlanShow';
+import MyPlans from './pages/MyPlans';
 import Settings from './pages/Settings';
 import Expenses from './pages/Expenses';
 import NavBar from './components/NavBar';
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/plan/new" element={<RequireAuth><PlanNew /></RequireAuth>} />
+          <Route path="/plans" element={<RequireAuth><MyPlans /></RequireAuth>} />
           <Route path="/plan/:id" element={<RequireAuth><PlanShow /></RequireAuth>} />
           <Route path="/expenses" element={<RequireAuth><Expenses /></RequireAuth>} />
           <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
