@@ -176,21 +176,9 @@ export class PlannerService {
     const cfg = this.settings.getSettings();
     const apiKey = (cfg as any).BAILIAN_API_KEY;
     if (!apiKey || typeof apiKey !== 'string' || apiKey.trim() === '') {
-      // Fallback: very lightweight regex-based extraction when API key missing
-      const fields: ExtractedFields = { coverage: 'none' };
-      const destMatch = text.match(/目的地[:：]\s*([\u4e00-\u9fa5A-Za-z\s]+)/);
-      const dateMatch = text.match(/(\d{4}-\d{2}-\d{2}).{0,10}(\d{4}-\d{2}-\d{2})/);
-      const partyMatch = text.match(/(同行人数|人数)[:：]?\s*(\d+)/);
-      const budgetMatch = text.match(/(预算|总预算)[:：]?\s*(\d+)/);
-      if (destMatch) fields.destination = destMatch[1].trim();
-      if (dateMatch) { fields.start_date = dateMatch[1]; fields.end_date = dateMatch[2]; }
-      if (partyMatch) fields.party_size = Number(partyMatch[2]);
-      if (budgetMatch) fields.budget = Number(budgetMatch[2]);
-      fields.notes = text;
-      const hasCore = !!(fields.destination && fields.start_date && fields.end_date && fields.party_size);
-      const hasAny = !!(fields.destination || fields.start_date || fields.end_date || fields.party_size || fields.budget);
-      fields.coverage = hasCore ? 'full' : (hasAny ? 'partial' : 'none');
-      return fields;
+      const err: any = new Error('未配置大模型BAILIAN_API_KEY，请先至设置页面进行配置！');
+      err.code = 'BAD_REQUEST';
+      throw err;
     }
 
     const fetchFn = (global as any).fetch as typeof globalThis.fetch;

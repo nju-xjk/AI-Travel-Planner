@@ -245,7 +245,14 @@ export default function PlanNew() {
       });
       const json = await resp.json();
       if (!resp.ok || !json?.data) {
-        setSpeechMsg(json?.message || '文本提取失败');
+        const msg = json?.message || '文本提取失败';
+        // 当后端返回缺少大模型密钥的错误时，弹窗提示并引导至设置页面
+        if (json?.code === 'BAD_REQUEST' && typeof msg === 'string' && (msg.includes('BAILIAN_API_KEY') || msg.includes('未配置大模型'))) {
+          window.alert('未配置大模型BAILIAN_API_KEY，请先至设置页面进行配置！');
+          // 可选：跳转到设置页面，方便用户立即配置
+          try { window.location.href = '/settings'; } catch {}
+        }
+        setSpeechMsg(msg);
         setSpeechStage('error');
         return;
       }
