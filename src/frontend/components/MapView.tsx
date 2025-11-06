@@ -129,14 +129,16 @@ export default function MapView({ itinerary, apiKey, dayIndex: dayIndexProp, hid
           if (disposed) return;
           setReady(true);
           mapRef.current = map;
+          // 初次渲染时优先采用父组件传入的 dayIndexProp，避免所有实例都显示第1天
+          const currentDayIndex = typeof dayIndexProp === 'number' ? dayIndexProp : dayIndex;
           const allList = dayLocations.flat();
-          const list = dayIndex === -1 ? allList : (dayLocations[dayIndex] || []);
+          const list = currentDayIndex === -1 ? allList : (dayLocations[currentDayIndex] || []);
           // 设置一个安全的初始中心，避免地图未居中时显示空白
           const seedName = list[0] || (itinerary?.destination ? String(itinerary.destination) : undefined);
           if (seedName) {
             try { map.centerAndZoom(seedName, 11); } catch { /* noop */ }
           }
-          await drawDayRouteBMap(mapRef.current, list, itinerary?.destination, getDayColor(dayIndex));
+          await drawDayRouteBMap(mapRef.current, list, itinerary?.destination, getDayColor(currentDayIndex));
         } catch (_err) {
           if (!disposed) {
             setLoadError('地图初始化失败，请检查百度浏览器端AK与域名白名单');
