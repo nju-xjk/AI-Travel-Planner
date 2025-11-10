@@ -19,6 +19,7 @@ export default function MyPlans() {
   const [plans, setPlans] = React.useState<PlanBasic[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [msg, setMsg] = React.useState('');
+  const [deletingId, setDeletingId] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     (async () => {
@@ -33,6 +34,27 @@ export default function MyPlans() {
       setLoading(false);
     })();
   }, []);
+
+  async function onDeletePlan(id: number) {
+    if (deletingId) return; // prevent concurrent
+    const ok = window.confirm('确定要删除该行程吗？该操作不可恢复。');
+    if (!ok) return;
+    setDeletingId(id);
+    setMsg('');
+    try {
+      const res = await api<{ id: number }>(`/plans/${id}`, { method: 'DELETE' });
+      if (!res.data) {
+        setMsg(res.message || '删除失败');
+      } else {
+        setPlans(prev => prev.filter(p => p.id !== id));
+        setMsg('已删除该行程');
+      }
+    } catch (e) {
+      setMsg('删除失败');
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <div className="container" style={{ maxWidth: 960 }}>
@@ -56,8 +78,14 @@ export default function MyPlans() {
                     <div className="note">{p.start_date} ~ {p.end_date}{p.party_size ? ` · ${p.party_size}人` : ''}{p.budget ? ` · 预算¥${p.budget}` : ''}</div>
                     <div className="note">保存于 {new Date(p.created_at).toLocaleString()}</div>
                   </div>
-                  <div>
+                  <div style={{ display: 'flex', gap: 8 }}>
                     <Button type="button" variant="primary" onClick={() => navigate(`/plan/${p.id}`)}>查看详情</Button>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      onClick={() => onDeletePlan(p.id)}
+                      disabled={deletingId === p.id}
+                    >{deletingId === p.id ? '删除中…' : '删除'}</Button>
                   </div>
                 </div>
               </div>

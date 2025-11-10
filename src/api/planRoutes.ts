@@ -92,5 +92,25 @@ export function createPlanRouter(db: DB, opts: { jwtSecret: string }): express.R
     return res.status(200).json({ data });
   });
 
+  // Delete a plan by id (must be owned by user)
+  router.delete('/:id', guard, (req, res) => {
+    const user = (req as any).user as { id: number } | undefined;
+    if (!user) return res.status(401).json({ code: 'UNAUTHORIZED', message: 'missing user' });
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id) || id <= 0) return res.status(400).json({ code: 'BAD_REQUEST', message: 'invalid id' });
+    const plan = plans.getById(id);
+    if (!plan) return res.status(404).json({ code: 'NOT_FOUND', message: 'plan not found' });
+    if (plan.user_id !== user.id) return res.status(403).json({ code: 'FORBIDDEN', message: 'not your plan' });
+    try {
+      const deleted = plans.delete(id);
+      if (deleted <= 0) {
+        return res.status(500).json({ code: 'INTERNAL', message: 'failed to delete plan' });
+      }
+      return res.status(200).json({ data: { id } });
+    } catch (err: any) {
+      return res.status(500).json({ code: 'INTERNAL', message: err?.message || 'failed to delete plan' });
+    }
+  });
+
   return router;
 }
