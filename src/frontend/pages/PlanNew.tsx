@@ -23,6 +23,7 @@ export default function PlanNew() {
   const [end_date, setEnd] = useState(defaultEnd);
   const [preferencesText, setPreferencesText] = useState('');
   const [result, setResult] = useState<any>(null);
+  const [selectedDay, setSelectedDay] = useState<number>(0);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -90,6 +91,7 @@ export default function PlanNew() {
       return;
     }
     setResult(gen.data);
+    setSelectedDay(0);
     setLoading(false);
   };
 
@@ -495,12 +497,31 @@ export default function PlanNew() {
               <Button type="button" variant="primary" onClick={onSavePlan}>保存行程</Button>
               {msg && <span className="note">{msg}</span>}
             </div>
-            {result.days.map((d: any, idx: number) => (
-              <div key={idx} className="grid two">
-                <ItineraryView itinerary={result} singleDayIndex={idx} />
-                <MapView itinerary={result} apiKey={baiduAk} dayIndex={idx} hideControls={true} />
+
+            <Card title="选择查看的日期">
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {(result.days || []).map((_: any, idx: number) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setSelectedDay(idx)}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: 8,
+                      border: '1px solid var(--border)',
+                      background: idx === selectedDay ? 'var(--primary)' : 'var(--bg)',
+                      color: idx === selectedDay ? '#fff' : 'var(--fg)',
+                      cursor: 'pointer'
+                    }}
+                  >第{idx + 1}天</button>
+                ))}
               </div>
-            ))}
+            </Card>
+
+            <div className="grid two">
+              <ItineraryView itinerary={result} singleDayIndex={selectedDay} />
+              <MapView itinerary={result} apiKey={baiduAk} dayIndex={selectedDay} hideControls={true} />
+            </div>
           </div>
         )}
       </div>

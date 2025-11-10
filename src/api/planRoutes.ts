@@ -112,5 +112,30 @@ export function createPlanRouter(db: DB, opts: { jwtSecret: string }): express.R
     }
   });
 
+  // Get a single day of a plan (must be owned by user)
+  router.get('/:id/day/:dayIndex', guard, (req, res) => {
+    const user = (req as any).user as { id: number } | undefined;
+    if (!user) return res.status(401).json({ code: 'UNAUTHORIZED', message: 'missing user' });
+    const id = Number(req.params.id);
+    const dayIndex = Number(req.params.dayIndex);
+    if (!Number.isFinite(id) || id <= 0) return res.status(400).json({ code: 'BAD_REQUEST', message: 'invalid id' });
+    if (!Number.isFinite(dayIndex) || dayIndex <= 0) return res.status(400).json({ code: 'BAD_REQUEST', message: 'invalid dayIndex' });
+    const plan = plans.getById(id);
+    if (!plan) return res.status(404).json({ code: 'NOT_FOUND', message: 'plan not found' });
+    if (plan.user_id !== user.id) return res.status(403).json({ code: 'FORBIDDEN', message: 'not your plan' });
+    const day = (plan.days || []).find(d => d.day_index === dayIndex);
+    if (!day) return res.status(404).json({ code: 'NOT_FOUND', message: 'day not found' });
+    const segments = (() => { try { return JSON.parse(day.segments_json || '[]'); } catch { return []; } })();
+    const data = {
+      plan_id: plan.id,
+      destination: plan.destination,
+      start_date: plan.start_date,
+      end_date: plan.end_date,
+      day_index: dayIndex,
+      segments,
+    };
+    return res.status(200).json({ data });
+  });
+
   return router;
 }

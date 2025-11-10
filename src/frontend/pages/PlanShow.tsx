@@ -22,6 +22,7 @@ export default function PlanShow() {
   const [loading, setLoading] = React.useState(true);
   const [msg, setMsg] = React.useState('');
   const [baiduAk, setBaiduAk] = React.useState<string | undefined>();
+  const [selectedDay, setSelectedDay] = React.useState<number>(0);
 
   React.useEffect(() => {
     (async () => {
@@ -44,6 +45,7 @@ export default function PlanShow() {
         setPlan(null);
       } else {
         setPlan(res.data);
+        setSelectedDay(0);
       }
       setLoading(false);
     })();
@@ -68,12 +70,30 @@ export default function PlanShow() {
 
       {plan && (
         <div className="stack" style={{ gap: 16 }}>
-          {plan.days.map((d, idx) => (
-            <div key={idx} className="grid two">
-              <ItineraryView itinerary={plan as any} singleDayIndex={idx} />
-              <MapView itinerary={plan as any} apiKey={baiduAk} dayIndex={idx} hideControls={true} />
+          <Card title="选择查看的日期">
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {plan.days.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setSelectedDay(idx)}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    background: idx === selectedDay ? 'var(--primary)' : 'var(--bg)',
+                    color: idx === selectedDay ? '#fff' : 'var(--fg)',
+                    cursor: 'pointer'
+                  }}
+                >第{idx + 1}天</button>
+              ))}
             </div>
-          ))}
+          </Card>
+
+          <div className="grid two">
+            <ItineraryView itinerary={plan as any} singleDayIndex={selectedDay} />
+            <MapView itinerary={plan as any} apiKey={baiduAk} dayIndex={selectedDay} hideControls={true} />
+          </div>
         </div>
       )}
     </div>
