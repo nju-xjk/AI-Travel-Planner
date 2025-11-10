@@ -492,36 +492,43 @@ export default function PlanNew() {
         </Card>
 
         {result && (
-          <div className="stack" style={{ gridColumn: '1 / -1', gap: 16 }}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <Button type="button" variant="primary" onClick={onSavePlan}>保存行程</Button>
-              {msg && <span className="note">{msg}</span>}
-            </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <Card
+              title="行程模块"
+              footer={(
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12 }}>
+                  <Button type="button" variant="primary" onClick={onSavePlan}>保存行程</Button>
+                  {msg && <span className="note">{msg}</span>}
+                </div>
+              )}
+            >
+              <div className="stack" style={{ gap: 16 }}>
+                <Card title="选择查看的日期">
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {(result.days || []).map((_: any, idx: number) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setSelectedDay(idx)}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: 8,
+                          border: '1px solid var(--border)',
+                          background: idx === selectedDay ? 'var(--primary)' : 'var(--bg)',
+                          color: idx === selectedDay ? '#fff' : 'var(--fg)',
+                          cursor: 'pointer'
+                        }}
+                      >第{idx + 1}天</button>
+                    ))}
+                  </div>
+                </Card>
 
-            <Card title="选择查看的日期">
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {(result.days || []).map((_: any, idx: number) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setSelectedDay(idx)}
-                    style={{
-                      padding: '6px 10px',
-                      borderRadius: 8,
-                      border: '1px solid var(--border)',
-                      background: idx === selectedDay ? 'var(--primary)' : 'var(--bg)',
-                      color: idx === selectedDay ? '#fff' : 'var(--fg)',
-                      cursor: 'pointer'
-                    }}
-                  >第{idx + 1}天</button>
-                ))}
+                <div className="grid two">
+                  <ItineraryView itinerary={result} singleDayIndex={selectedDay} />
+                  <MapView itinerary={result} apiKey={baiduAk} dayIndex={selectedDay} hideControls={true} />
+                </div>
               </div>
             </Card>
-
-            <div className="grid two">
-              <ItineraryView itinerary={result} singleDayIndex={selectedDay} />
-              <MapView itinerary={result} apiKey={baiduAk} dayIndex={selectedDay} hideControls={true} />
-            </div>
           </div>
         )}
       </div>
