@@ -12,6 +12,7 @@ type Itinerary = { destination: string; start_date: string; end_date: string; da
 
 export default function PlanNew() {
   const navigate = useNavigate();
+  const CACHE_KEY = 'plan_new_cache_v1';
   const [destination, setDestination] = useState('Hangzhou');
   // 默认开始日期为今天、结束日期为次日
   const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
@@ -54,6 +55,40 @@ export default function PlanNew() {
   const [partySize, setPartySize] = useState<number | ''>(1);
   const [budgetHint, setBudgetHint] = useState<number | ''>('');
   const [fieldErrors, setFieldErrors] = useState<{ destination: boolean; start_date: boolean; end_date: boolean; party_size: boolean }>(() => ({ destination: false, start_date: false, end_date: false, party_size: false }));
+
+  // 初次挂载时，从本地缓存恢复页面状态
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return;
+      const cache = JSON.parse(raw);
+      if (typeof cache.destination === 'string') setDestination(cache.destination);
+      if (typeof cache.start_date === 'string') setStart(cache.start_date);
+      if (typeof cache.end_date === 'string') setEnd(cache.end_date);
+      if (typeof cache.preferencesText === 'string') setPreferencesText(cache.preferencesText);
+      if (typeof cache.partySize === 'number' || cache.partySize === '') setPartySize(cache.partySize);
+      if (typeof cache.budgetHint === 'number' || cache.budgetHint === '') setBudgetHint(cache.budgetHint);
+      if (cache.result) setResult(cache.result);
+      if (typeof cache.selectedDay === 'number') setSelectedDay(cache.selectedDay);
+    } catch { /* ignore parse error */ }
+  }, []);
+
+  // 当关键字段变化时，写入本地缓存，确保切页返回后仍保留
+  React.useEffect(() => {
+    const data = {
+      destination,
+      start_date,
+      end_date,
+      preferencesText,
+      partySize,
+      budgetHint,
+      result,
+      selectedDay
+    };
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    } catch { /* ignore storage error */ }
+  }, [destination, start_date, end_date, preferencesText, partySize, budgetHint, result, selectedDay]);
 
   React.useEffect(() => {
     (async () => {
