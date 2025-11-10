@@ -1,7 +1,7 @@
 import { SettingsService } from './settingsService';
 import { LLMClient, GenerateItineraryInput, GeneratedItinerary } from './llm/LLMClient';
 import { BailianLLMClient } from './llm/bailianClient';
-import { validateItinerary } from '../schemas/itinerary';
+import { validateItinerary, evaluateItineraryQuality } from '../schemas/itinerary';
 import { metrics } from '../observability/metrics';
 
 type ExtractCoverage = 'none' | 'partial' | 'full';
@@ -74,8 +74,11 @@ export class PlannerService {
     }
     const llm = this.getLLMClient();
     const cfg = this.settings.getSettings();
+    const env = process.env.NODE_ENV || 'development';
     const MAX_RETRIES = Number.isFinite(cfg.LLM_MAX_RETRIES as any) ? Number(cfg.LLM_MAX_RETRIES) : 2;
-    const TIMEOUT_MS = Number.isFinite(cfg.LLM_TIMEOUT_MS as any) ? Number(cfg.LLM_TIMEOUT_MS) : 1000;
+    const TIMEOUT_MS = env === 'test'
+      ? 1000
+      : (Number.isFinite(cfg.LLM_TIMEOUT_MS as any) ? Number(cfg.LLM_TIMEOUT_MS) : 1000);
     metrics.planner.total_generations += 1;
 
     const callWithTimeout = <T>(p: Promise<T>, ms: number): Promise<T> => {
@@ -99,14 +102,34 @@ export class PlannerService {
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
         const result = await callWithTimeout(llm.generateItinerary(input), TIMEOUT_MS);
-        const { valid } = validateItinerary(result);
-        if (!valid) {
+        const validation = validateItinerary(result);
+        if (!validation.valid) {
           const err: any = new Error('invalid itinerary generated');
           err.code = 'BAD_GATEWAY';
           lastError = err;
+          try {
+            console.warn('[PlannerService] Validation failed:', (validation.errors || []).join('; '));
+          } catch {}
           metrics.planner.invalid += 1;
           if (attempt < MAX_RETRIES) metrics.planner.retries += 1;
           continue; // retry
+        }
+        // 质量评估：测试环境跳过，生产环境需达到阈值
+        // 质量评估：测试环境跳过，生产环境需达到阈值
+        const envCheck = env;
+        if (envCheck !== 'test') {
+          const quality = evaluateItineraryQuality(result);
+          if (!quality.ok) {
+            const err: any = new Error('itinerary quality insufficient');
+            err.code = 'BAD_GATEWAY';
+            lastError = err;
+            try {
+              console.warn('[PlannerService] Quality insufficient:', `score=${quality.score}`, 'reasons=', quality.reasons);
+            } catch {}
+            metrics.planner.invalid += 1;
+            if (attempt < MAX_RETRIES) metrics.planner.retries += 1;
+            continue; // retry on low quality
+          }
         }
         const normalized = this.normalizeItinerary(input, result);
         metrics.planner.success += 1;

@@ -70,15 +70,16 @@ export class BailianLLMClient implements LLMClient {
     const { destination, start_date, end_date, preferences, party_size, budget } = input;
     const daysCount = calculateDaysCount(start_date, end_date);
 
-    // 通过明确的提示词要求严格JSON输出，字段与项目Schema一致
+    // 通过明确的提示词要求严格JSON输出，并提升行程细致度
     const prompt = [
-      '你是一名行程规划助手，请严格输出一个 JSON（不要任何解释或附加文本）。',
-      '字段必须为：destination, start_date, end_date, days, budget, party_size。',
-      'days 为数组，长度等于行程天数；每个元素包含 day_index（从1开始递增）、segments（数组，至少1个）。',
-      'segments 每项至少包含 title，且必须包含 costEstimate（人均CNY，数字）；建议提供 type（transport|accommodation|food|entertainment|attraction|shopping|other）。可选：startTime, endTime（格式HH:MM）、location, notes。',
-      '要求所有时间字段使用 24小时制 HH:MM。',
-      '禁止输出任何占位符，如 ??? 或 N/A；若信息不确定，请填写 "未知"。',
-      '请仅输出 JSON 内容，不要使用代码块或前后说明。',
+      '你是一名专业行程规划助手。请严格只输出一个 JSON 对象（不要任何解释或附加文本、不要代码块）。',
+      '必须字段：destination, start_date, end_date, days, budget, party_size。',
+      'days 是数组，长度=行程天数；每个元素包含 day_index（从1开始递增）、segments（数组）。',
+      '段落 segments：\n- 每段必须包含：title, type, costEstimate（人均CNY，数字）；\n- 强烈建议包含：timeRange（HH:MM-HH:MM）或 startTime/endTime（HH:MM），location（具体到商家/景点/酒店全称），notes（包含必要细节）；\n- type 取值：transport|accommodation|food|entertainment|attraction|shopping|other；',
+      '细化要求：\n- 住宿（accommodation）：写明具体酒店名称与地址；入住/退房时间；如需押金或早餐说明写在 notes。\n- 餐饮（food）：具体餐厅名称与地址；推荐菜；人均预算；如需排队预留时间。\n- 交通（transport）：具体方式（步行/地铁/公交/打车/高铁/飞机等）、起点与终点；预计时长；费用；在 notes 中写清线路或车次。\n- 景点（attraction/entertainment）：具体景点名称；预计游玩时长；门票价格/预约说明；最佳时间段；避免高峰建议。\n- 购物（shopping）：具体商场/商业街名称；预算与停留时长。',
+      '时间与节奏：\n- 每天建议≥4段，包含餐饮、交通、景点/娱乐、住宿等组合；\n- 使用 24小时制；安排合理间隔；避免不现实的行程（跨城移动需考虑时长）。',
+      '预算：\n- 对每段给出 costEstimate（CNY）；如不确定填近似值但不要占位符；\n- 计算并给出总 budget（该人数）。',
+      '禁止：任何占位符（???/N/A）；不要输出除 JSON 外的任何文本。',
       '',
       `destination: ${destination}`,
       `start_date: ${start_date}`,
@@ -86,7 +87,7 @@ export class BailianLLMClient implements LLMClient {
       `days_count: ${daysCount}`,
       preferences ? `preferences_hint: ${JSON.stringify(preferences)}` : '',
       typeof party_size === 'number' ? `party_size: ${party_size}` : 'party_size: 1',
-      typeof budget === 'number' ? `budget_hint: ${budget}` : 'budget_hint: 未提供。请结合行程为该人数预测总预算（CNY），输出为 budget 字段的数字。'
+      typeof budget === 'number' ? `budget_hint: ${budget}` : 'budget_hint: 未提供；请结合行程为该人数预测总预算（CNY），输出为 budget 字段数字。'
     ].filter(Boolean).join('\n');
 
     console.log('[BailianLLMClient] Generated prompt:', prompt);

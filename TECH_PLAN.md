@@ -179,6 +179,39 @@
       "token_budget_hint": "≤12,000字符；模式定义与Mock占比高。"
     },
     {
+      "name": "行程细致度提升与成功判定（Prompt与质量评估）",
+      "goal_DOD": "提升Prompt明确性，生成更细致行程；增加质量评估规则，未达标自动重试；更新前端展示兼容字段。",
+      "io_contract": {
+        "inputs": [
+          "用户需求：目的地、起止日期、预算、人群、偏好"
+        ],
+        "outputs": [
+          "丰富的行程JSON：segments包含type、timeRange/startTime、location、notes、costEstimate；每天≥4段；含交通/餐饮/景点/住宿组合；总budget"
+        ],
+        "apis": [
+          "HTTP：`POST /planner/generate` 200/400/502（低质量触发重试）"
+        ],
+        "data_models": [
+          "沿用现有ItinerarySchema（zod）；新增`evaluateItineraryQuality(it)`用于成功判定"
+        ]
+      },
+      "tests": {
+        "unit": [
+          "质量评估：最小行程被判低质量；丰富行程通过质量阈值"
+        ],
+        "integration": [
+          "服务层在生产环境对低质量输出重试"
+        ]
+      },
+      "success_criteria": [
+        "每天≥4段，包含餐饮/交通/景点/住宿组合",
+        "≥80%段落含type，≥70%有时间信息，≥70%含成本估计",
+        "住宿/餐饮/景点段必须有具体地点（location）",
+        "至少包含一个交通段（transport）",
+        "综合得分≥60且问题项≤2"
+      ]
+    }
+    {
       "name": "预算估算服务（分项成本聚合与预警）",
       "goal_DOD": "基于行程生成分项预算（交通/住宿/餐饮/景点），输出总预算与预警；单测≥70%。",
       "io_contract": {

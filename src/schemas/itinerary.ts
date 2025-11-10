@@ -11,7 +11,8 @@ export const DaySegmentSchema = z.object({
     .enum(['transport', 'accommodation', 'food', 'entertainment', 'attraction', 'shopping', 'other'])
     .optional(),
   placeId: z.string().optional(),
-  costEstimate: z.number().positive().optional(),
+  // 允许为 0（例如步行交通或免费景点）；非负更合理
+  costEstimate: z.number().nonnegative().optional(),
   timeRange: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/).optional()
 });
 
@@ -53,4 +54,82 @@ export function validateItinerary(it: any): { valid: boolean; errors?: string[] 
   if (parsed.success) return { valid: true };
   const errors = parsed.error.issues.map(i => i.message);
   return { valid: false, errors };
+}
+
+// 质量评估：在通过基本 Schema 后，进一步判断是否“足够细致”
+export function evaluateItineraryQuality(it: any): { ok: boolean; score: number; reasons: string[] } {
+  const reasons: string[] = [];
+  const base = ItinerarySchema.safeParse(it);
+  if (!base.success) {
+    return { ok: false, score: 0, reasons: ['schema invalid'] };
+  }
+  const val = base.data;
+  const days = val.days || [];
+  const dayCount = days.length;
+  if (dayCount <= 0) {
+    return { ok: false, score: 0, reasons: ['no days'] };
+  }
+  let score = 0;
+
+  // 规则1：每天≥4段
+  const minSegPerDay = 4;
+  const segEnoughDays = days.filter(d => (d.segments || []).length >= minSegPerDay).length;
+  if (segEnoughDays < dayCount) {
+    reasons.push(`not enough segments per day: ${segEnoughDays}/${dayCount} meet >=${minSegPerDay}`);
+  } else {
+    score += 20;
+  }
+
+  // 规则2：type 填写率≥80%
+  const allSegs = days.flatMap(d => d.segments || []);
+  const typeFilled = allSegs.filter(s => typeof (s as any).type === 'string' && ((s as any).type as string).length > 0).length;
+  const typeRate = allSegs.length ? typeFilled / allSegs.length : 0;
+  if (typeRate < 0.8) {
+    reasons.push(`type filled rate too low: ${(typeRate * 100).toFixed(0)}%`);
+  } else {
+    score += 20;
+  }
+
+  // 规则3：有时间信息（timeRange 或 startTime/endTime）比例≥70%
+  const timeFilled = allSegs.filter(s => {
+    const a = s as any;
+    return (typeof a.timeRange === 'string' && /^\d{2}:\d{2}-\d{2}:\d{2}$/.test(a.timeRange))
+      || (typeof a.startTime === 'string' && /^\d{2}:\d{2}$/.test(a.startTime))
+      || (typeof a.endTime === 'string' && /^\d{2}:\d{2}$/.test(a.endTime));
+  }).length;
+  const timeRate = allSegs.length ? timeFilled / allSegs.length : 0;
+  if (timeRate < 0.7) {
+    reasons.push(`time info rate too low: ${(timeRate * 100).toFixed(0)}%`);
+  } else {
+    score += 20;
+  }
+
+  // 规则4：costEstimate 填写比例≥70%
+  const costFilled = allSegs.filter(s => typeof (s as any).costEstimate === 'number' && Number((s as any).costEstimate) >= 0).length;
+  const costRate = allSegs.length ? costFilled / allSegs.length : 0;
+  if (costRate < 0.7) {
+    reasons.push(`costEstimate rate too low: ${(costRate * 100).toFixed(0)}%`);
+  } else {
+    score += 20;
+  }
+
+  // 规则5：关键类型必须有具体地点（accommodation/food/attraction）
+  const mustHaveLocTypes = new Set(['accommodation', 'food', 'attraction']);
+  const missingLoc = allSegs.filter(s => mustHaveLocTypes.has(((s as any).type || '').toString()) && (!((s as any).location) || !String((s as any).location).trim())).length;
+  if (missingLoc > 0) {
+    reasons.push(`some key segments missing location: ${missingLoc}`);
+  } else {
+    score += 10;
+  }
+
+  // 规则6：至少有一个交通段（transport）
+  const hasTransport = allSegs.some(s => ((s as any).type || '') === 'transport');
+  if (!hasTransport) {
+    reasons.push('no transport segment present');
+  } else {
+    score += 10;
+  }
+
+  const ok = score >= 60 && reasons.length <= 2; // 综合阈值
+  return { ok, score, reasons };
 }
