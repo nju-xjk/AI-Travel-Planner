@@ -52,7 +52,7 @@ export default function ItineraryView({ itinerary, singleDayIndex }: { itinerary
   const toggleDay = (idx: number) => setOpenDays(prev => ({ ...prev, [idx]: !prev[idx] }));
 
   return (
-    <Card title="行程">
+    <Card>
       <div className="itinerary-header">
         <div className="itinerary-title">📍 {itinerary.destination}</div>
         <div className="itinerary-dates">🗓️ {itinerary.start_date} → {itinerary.end_date}</div>

@@ -494,7 +494,7 @@ export default function PlanNew() {
         {result && (
           <div style={{ gridColumn: '1 / -1' }}>
             <Card
-              title="行程模块"
+              title="行程与地图"
               footer={(
                 <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12 }}>
                   <Button type="button" variant="primary" onClick={onSavePlan}>保存行程</Button>
