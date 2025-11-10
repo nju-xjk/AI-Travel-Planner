@@ -6,7 +6,6 @@ import PlanNew from './pages/PlanNew';
 import PlanShow from './pages/PlanShow';
 import MyPlans from './pages/MyPlans';
 import Settings from './pages/Settings';
-import Expenses from './pages/Expenses';
 import NavBar from './components/NavBar';
 import RequireAuth from './components/RequireAuth';
 
@@ -22,7 +21,7 @@ export default function App() {
           <Route path="/plan/new" element={<RequireAuth><PlanNew /></RequireAuth>} />
           <Route path="/plans" element={<RequireAuth><MyPlans /></RequireAuth>} />
           <Route path="/plan/:id" element={<RequireAuth><PlanShow /></RequireAuth>} />
-          <Route path="/expenses" element={<RequireAuth><Expenses /></RequireAuth>} />
+          {/** 费用功能已融入行程详情页，移除独立路由 */}
           <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
         </Routes>
         <div className="footer">AI Travel Planner · Better trips with smarter planning ✈️</div>
