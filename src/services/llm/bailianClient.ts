@@ -106,17 +106,10 @@ export class BailianLLMClient implements LLMClient {
       'Content-Type': 'application/json'
     };
 
-    // 优先使用 Chat Completions（OpenAI 兼容），强制 JSON 输出
+    // 过去尝试 Chat Completions 会返回 404，这里直接跳过，改为仅使用 Text Generation
+    // 如需恢复 Chat 模式，可改为条件开关或配置项。
     const chatUrl = 'https://dashscope.aliyuncs.com/compatible/v1/chat/completions';
-    const chatBody = {
-      model: 'qwen-turbo',
-      messages: [
-        { role: 'system', content: '你是行程规划助手。只输出严格 JSON，符合项目的 Itinerary 结构。禁止使用占位符(如???/N/A)。' },
-        { role: 'user', content: prompt }
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.2
-    } as any;
+    const chatBody = {} as any;
 
     const tryParse = (raw: string): any => {
       const cleaned = stripCodeFences(raw);
@@ -152,29 +145,8 @@ export class BailianLLMClient implements LLMClient {
       return parsed;
     };
 
-    // 先尝试 Chat Completions
-    try {
-      console.log('[BailianLLMClient] Calling Chat Completions:', chatUrl);
-      const resp = await fetchFn(chatUrl, { method: 'POST', headers, body: JSON.stringify(chatBody) });
-      console.log('[BailianLLMClient] Chat resp status:', resp.status, resp.statusText);
-      if (!resp.ok) {
-        const text = await resp.text().catch(() => '');
-        console.error('[BailianLLMClient] Chat error:', text);
-        throw Object.assign(new Error(`bailian chat http ${resp.status}: ${text?.slice(0, 200)}`), { code: resp.status >= 500 ? 'BAD_GATEWAY' : 'BAD_REQUEST' });
-      }
-      const json: any = await resp.json().catch(() => null);
-      console.log('[BailianLLMClient] Chat JSON:', JSON.stringify(json, null, 2));
-      if (!json) throw Object.assign(new Error('bailian chat response not json'), { code: 'BAD_GATEWAY' });
-      const raw = extractRaw(json);
-      const parsed = tryParse(raw);
-      const withId = addRequestIdNote(parsed, json?.id || json?.request_id);
-      let it = coerceItinerary(withId);
-      it = this.normalizeItinerary(input, it);
-      console.log('[BailianLLMClient] Chat parsed itinerary ok (normalized)');
-      return it;
-    } catch (chatErr) {
-      console.warn('[BailianLLMClient] Chat call failed, fallback to Text Generation:', (chatErr as any)?.message || chatErr);
-    }
+    // 跳过 Chat Completions，直接使用 Text Generation
+    console.log('[BailianLLMClient] Skipping Chat Completions; using Text Generation directly');
 
     // 回退到 Text Generation
     const genUrl = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation';
