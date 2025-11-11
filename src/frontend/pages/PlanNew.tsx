@@ -13,7 +13,7 @@ type Itinerary = { destination: string; start_date: string; end_date: string; da
 export default function PlanNew() {
   const navigate = useNavigate();
   const CACHE_KEY = 'plan_new_cache_v1';
-  const [destination, setDestination] = useState('Hangzhou');
+  const [destination, setDestination] = useState('南京');
   // 默认开始日期为今天、结束日期为次日
   const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
   const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
