@@ -130,6 +130,18 @@ export function evaluateItineraryQuality(it: any): { ok: boolean; score: number;
     score += 10;
   }
 
-  const ok = score >= 60 && reasons.length <= 2; // 综合阈值
+  // 规则7（关键约束）：每天至少包含午餐与晚餐两个餐饮段（type=food）
+  const daysMealsOk = days.every(d => {
+    const foodCount = (d.segments || []).filter(s => ((s as any).type || '') === 'food').length;
+    return foodCount >= 2; // 至少午餐与晚餐
+  });
+  if (!daysMealsOk) {
+    reasons.push('meals missing: 每天至少午餐与晚餐 (type=food)');
+  } else {
+    score += 10;
+  }
+
+  // 综合阈值：必须满足餐饮关键约束，同时分数与问题数量达到要求
+  const ok = daysMealsOk && score >= 60 && reasons.length <= 2;
   return { ok, score, reasons };
 }
