@@ -54,12 +54,25 @@ export default function ItineraryView({ itinerary, singleDayIndex }: { itinerary
 
   const toggleDay = (idx: number) => setOpenDays(prev => ({ ...prev, [idx]: !prev[idx] }));
 
+  const totalBudget = React.useMemo(() => {
+    const modelTotal = typeof (itinerary as any).budget === 'number' ? (itinerary as any).budget : 0;
+    const sumDays = (itinerary.days || []).reduce((sum, day) => {
+      const dayVal = typeof day.dayBudget === 'number'
+        ? day.dayBudget
+        : (day.segments || []).reduce((s, seg) => s + (Number(seg.costEstimate) > 0 ? Number(seg.costEstimate) : 0), 0);
+      return sum + dayVal;
+    }, 0);
+    return modelTotal > 0 ? modelTotal : sumDays;
+  }, [itinerary]);
+
   return (
     <Card>
       <div className="itinerary-header">
         <div className="itinerary-title">📍 {itinerary.origin ? `${itinerary.origin} → ${itinerary.destination}` : itinerary.destination}</div>
         <div className="itinerary-dates">🗓️ {itinerary.start_date} → {itinerary.end_date}</div>
-        {/* 全局总预算不再显示，改为“当天预算”在各天标题处展示 */}
+        {totalBudget > 0 && (
+          <div className="itinerary-total">💰 总预算：¥{Math.round(totalBudget)}</div>
+        )}
       </div>
       {Array.isArray(itinerary.warnings) && itinerary.warnings.length > 0 && (
         <div className="warnings" style={{ marginTop: 8 }}>
@@ -106,7 +119,7 @@ export default function ItineraryView({ itinerary, singleDayIndex }: { itinerary
                               {seg.location}
                             </a>
                           )}
-                          {typeof seg.costEstimate === 'number' && <span className="chip">¥{seg.costEstimate}</span>}
+                          {typeof seg.costEstimate === 'number' && <span className="chip">¥{seg.costEstimate}/人</span>}
                         </div>
                         {displayNotes && <div className="segment-notes">{displayNotes}</div>}
                       </div>
