@@ -96,21 +96,8 @@ export class BudgetService {
       }
       if (missingType) warnings.push('Some segments lack type; estimates may be rough.');
     } else {
-      // Base per-person per-day rules (CNY) fallback
-      const perDay = {
-        accommodation: cfg.BUDGET_PERDAY_ACCOMMODATION ?? 300,
-        food: cfg.BUDGET_PERDAY_FOOD ?? 120,
-        transport: cfg.BUDGET_PERDAY_TRANSPORT ?? 50,
-        entertainment: cfg.BUDGET_PERDAY_ENTERTAINMENT ?? 80,
-      };
-      breakdown = {
-        accommodation: perDay.accommodation * daysCount * ps,
-        food: perDay.food * daysCount * ps,
-        transport: perDay.transport * daysCount * ps,
-        entertainment: perDay.entertainment * daysCount * ps,
-        shopping: 0,
-        other: 0
-      } as Record<string, number>;
+      // No itinerary provided and daily factor removed — keep zeros and warn
+      warnings.push('未提供行程；已移除“预算日均系数”兜底估算。建议提供分段或使用模型预算。');
     }
     const total = Object.values(breakdown).reduce((sum, v) => sum + v, 0);
     // Simple warning heuristics

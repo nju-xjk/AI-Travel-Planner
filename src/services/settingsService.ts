@@ -15,10 +15,6 @@ export interface Settings {
   BUDGET_COEFF_ACCOMMODATION?: number;
   BUDGET_COEFF_SHOPPING?: number;
   BUDGET_COEFF_OTHER?: number;
-  BUDGET_PERDAY_TRANSPORT?: number;
-  BUDGET_PERDAY_FOOD?: number;
-  BUDGET_PERDAY_ENTERTAINMENT?: number;
-  BUDGET_PERDAY_ACCOMMODATION?: number;
 }
 
 const CONFIG_DIR = path.resolve(process.cwd(), 'config');
@@ -46,7 +42,7 @@ export class SettingsService {
     const allowedKeys = [
       'BAILIAN_API_KEY', 'BAIDU_BROWSER_AK', 'XF_API_KEY', 'XF_API_SECRET', 'XF_APP_ID', 'LLM_TIMEOUT_MS', 'LLM_MAX_RETRIES',
       'BUDGET_COEFF_TRANSPORT', 'BUDGET_COEFF_FOOD', 'BUDGET_COEFF_ENTERTAINMENT', 'BUDGET_COEFF_ACCOMMODATION', 'BUDGET_COEFF_SHOPPING', 'BUDGET_COEFF_OTHER',
-      'BUDGET_PERDAY_TRANSPORT', 'BUDGET_PERDAY_FOOD', 'BUDGET_PERDAY_ENTERTAINMENT', 'BUDGET_PERDAY_ACCOMMODATION'
+      // Removed daily budget factor keys (BUDGET_PERDAY_*)
     ];
     const keys = Object.keys(payload || {});
     for (const k of keys) {
@@ -74,12 +70,6 @@ export class SettingsService {
           const n = Number(v);
           if (v != null && (!Number.isFinite(n) || n < 0 || n > 10000)) {
             return { valid: false, message: `${k} must be between 0 and 10000` };
-          }
-        }
-        if (k.startsWith('BUDGET_PERDAY_')) {
-          const n = Number(v);
-          if (v != null && (!Number.isFinite(n) || n < 0 || n > 5000)) {
-            return { valid: false, message: `${k} must be between 0 and 5000` };
           }
         }
       } else {
