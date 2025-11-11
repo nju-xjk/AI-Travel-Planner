@@ -12,6 +12,7 @@ export interface Preferences {
 export interface TravelPlanBasic {
   id: number;
   user_id: number;
+  origin?: string;
   destination: string;
   start_date: string; // ISO yyyy-mm-dd
   end_date: string;   // ISO yyyy-mm-dd

@@ -3,6 +3,7 @@ import { TravelPlan, TravelPlanBasic, PlanDay } from '../../domain/models';
 
 export interface CreatePlanInput {
   user_id: number;
+  origin?: string;
   destination: string;
   start_date: string;
   end_date: string;
@@ -20,11 +21,12 @@ export class PlanDAO {
     const preferences_json = input.preferences ? JSON.stringify(input.preferences) : null;
 
     const stmt = this.db.prepare(
-      `INSERT INTO plans (user_id, destination, start_date, end_date, budget, party_size, preferences_json, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO plans (user_id, origin, destination, start_date, end_date, budget, party_size, preferences_json, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     const info = stmt.run(
       input.user_id,
+      input.origin ?? null,
       input.destination,
       input.start_date,
       input.end_date,
@@ -68,6 +70,7 @@ export class PlanDAO {
   updateBasic(id: number, fields: Partial<Omit<TravelPlanBasic, 'id' | 'user_id' | 'created_at'>> & { preferences?: Record<string, unknown> | null }): number {
     const current = this.db.prepare('SELECT * FROM plans WHERE id = ?').get(id) as TravelPlanBasic | undefined;
     if (!current) return 0;
+    const origin = fields['origin'] ?? current.origin ?? null;
     const destination = fields['destination'] ?? current.destination;
     const start_date = fields['start_date'] ?? current.start_date;
     const end_date = fields['end_date'] ?? current.end_date;
@@ -76,9 +79,9 @@ export class PlanDAO {
     const preferences_json = fields['preferences'] ? JSON.stringify(fields['preferences']) : current.preferences_json ?? null;
     const info = this.db
       .prepare(
-        `UPDATE plans SET destination = ?, start_date = ?, end_date = ?, budget = ?, party_size = ?, preferences_json = ? WHERE id = ?`
+        `UPDATE plans SET origin = ?, destination = ?, start_date = ?, end_date = ?, budget = ?, party_size = ?, preferences_json = ? WHERE id = ?`
       )
-      .run(destination, start_date, end_date, budget, party_size, preferences_json, id);
+      .run(origin, destination, start_date, end_date, budget, party_size, preferences_json, id);
     return info.changes;
   }
 

@@ -9,6 +9,7 @@ import Input from '../components/Input';
 
 type PlanDetail = {
   id: number;
+  origin?: string;
   destination: string;
   start_date: string;
   end_date: string;
@@ -118,7 +119,7 @@ export default function PlanShow() {
         {!loading && plan && (
           <div className="stack" style={{ gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontWeight: 600 }}>{plan.destination}</div>
+              <div style={{ fontWeight: 600 }}>{plan.origin ? `${plan.origin} → ${plan.destination}` : plan.destination}</div>
               <div className="note">{plan.start_date} ~ {plan.end_date}{plan.party_size ? ` · ${plan.party_size}人` : ''}{plan.budget ? ` · 预算¥${plan.budget}` : ''}</div>
             </div>
             <div className="note">行程ID：{plan.id}</div>

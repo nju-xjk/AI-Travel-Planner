@@ -6,6 +6,7 @@ import { metrics } from '../observability/metrics';
 
 type ExtractCoverage = 'none' | 'partial' | 'full';
 export interface ExtractedFields {
+  origin?: string;
   destination?: string;
   start_date?: string;
   end_date?: string;
@@ -41,6 +42,7 @@ export class PlannerService {
             segments: [{ title: 'Mock segment', location: input.destination }]
           }));
           return {
+            origin: input.origin,
             destination: input.destination,
             start_date: input.start_date,
             end_date: input.end_date,
@@ -165,6 +167,7 @@ export class PlannerService {
       : (typeof input.party_size === 'number' && input.party_size > 0 ? input.party_size : undefined);
 
     const out: GeneratedItinerary = {
+      origin: input.origin,
       destination: input.destination,
       start_date: typeof it.start_date === 'string' ? it.start_date : input.start_date,
       end_date: typeof it.end_date === 'string' ? it.end_date : input.end_date,
@@ -237,13 +240,13 @@ export class PlannerService {
 
     const prompt = [
       '请阅读以下用户文本，严格输出一个 JSON 对象（不要任何解释）。',
-      '字段：destination, start_date, end_date, party_size, budget, notes, coverage。',
+      '字段：origin, destination, start_date, end_date, party_size, budget, notes, coverage。',
       'notes 为除结构化字段外的补充信息（可为空字符串）。',
       '日期格式必须为 yyyy-mm-dd。party_size 为数字。budget 为数字（CNY）。',
       '若文本包含持续天数（如“5天”或“五天”），且存在出发日期，请自动计算结束日期为出发日期加【持续天数-1】天。',
       '若用户仅说出日期未指明年份，则默认使用当前年份；若该日期在当前年份已过，则自动推算为下一年。',
       'coverage 为 none|partial|full：',
-      '- full：文本包含目的地、开始日期、结束日期、同行人数四项；',
+      '- full：文本包含出发地、目的地、开始日期、结束日期、同行人数五项；',
       '- partial：包含部分关键字段但不完整；',
       '- none：与行程无关或无法提取。',
       '禁止使用占位符(如???/N/A)。若未知请省略字段或设为空字符串。',
@@ -293,6 +296,7 @@ export class PlannerService {
       const raw = extractRaw(json);
       const parsed = tryParse(raw);
       const fields: ExtractedFields = {
+        origin: typeof parsed?.origin === 'string' ? parsed.origin.trim() : undefined,
         destination: typeof parsed?.destination === 'string' ? parsed.destination.trim() : undefined,
         start_date: typeof parsed?.start_date === 'string' ? parsed.start_date.trim() : undefined,
         end_date: typeof parsed?.end_date === 'string' ? parsed.end_date.trim() : undefined,

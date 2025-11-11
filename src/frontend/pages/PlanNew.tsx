@@ -8,11 +8,12 @@ import Button from '../components/Button';
 import MapView from '../components/MapView';
 import ItineraryView from '../components/ItineraryView';
 
-type Itinerary = { destination: string; start_date: string; end_date: string; days: any[]; budget?: number; party_size?: number };
+type Itinerary = { origin?: string; destination: string; start_date: string; end_date: string; days: any[]; budget?: number; party_size?: number };
 
 export default function PlanNew() {
   const navigate = useNavigate();
   const CACHE_KEY = 'plan_new_cache_v1';
+  const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('南京');
   // 默认开始日期为今天、结束日期为次日
   const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
@@ -54,7 +55,7 @@ export default function PlanNew() {
   const [baiduAk, setBaiduAk] = useState<string | undefined>();
   const [partySize, setPartySize] = useState<number | ''>(1);
   const [budgetHint, setBudgetHint] = useState<number | ''>('');
-  const [fieldErrors, setFieldErrors] = useState<{ destination: boolean; start_date: boolean; end_date: boolean; party_size: boolean }>(() => ({ destination: false, start_date: false, end_date: false, party_size: false }));
+  const [fieldErrors, setFieldErrors] = useState<{ origin: boolean; destination: boolean; start_date: boolean; end_date: boolean; party_size: boolean }>(() => ({ origin: false, destination: false, start_date: false, end_date: false, party_size: false }));
 
   // 初次挂载时，从本地缓存恢复页面状态
   React.useEffect(() => {
@@ -62,6 +63,7 @@ export default function PlanNew() {
       const raw = localStorage.getItem(CACHE_KEY);
       if (!raw) return;
       const cache = JSON.parse(raw);
+      if (typeof cache.origin === 'string') setOrigin(cache.origin);
       if (typeof cache.destination === 'string') setDestination(cache.destination);
       if (typeof cache.start_date === 'string') setStart(cache.start_date);
       if (typeof cache.end_date === 'string') setEnd(cache.end_date);
@@ -76,6 +78,7 @@ export default function PlanNew() {
   // 当关键字段变化时，写入本地缓存，确保切页返回后仍保留
   React.useEffect(() => {
     const data = {
+      origin,
       destination,
       start_date,
       end_date,
@@ -88,7 +91,7 @@ export default function PlanNew() {
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(data));
     } catch { /* ignore storage error */ }
-  }, [destination, start_date, end_date, preferencesText, partySize, budgetHint, result, selectedDay]);
+  }, [origin, destination, start_date, end_date, preferencesText, partySize, budgetHint, result, selectedDay]);
 
   React.useEffect(() => {
     (async () => {
@@ -110,7 +113,7 @@ export default function PlanNew() {
   };
 
   const generateCurrent = async () => {
-    const payload: any = { destination, start_date, end_date };
+    const payload: any = { origin, destination, start_date, end_date };
     if (preferencesText && preferencesText.trim()) {
       payload.preferences = { notes: preferencesText.trim() };
     }
@@ -271,6 +274,7 @@ export default function PlanNew() {
   };
 
   const applyExtractedFields = (fields: any) => {
+    if (typeof fields?.origin === 'string' && fields.origin.trim()) setOrigin(fields.origin.trim());
     if (typeof fields?.destination === 'string' && fields.destination.trim()) setDestination(fields.destination.trim());
     if (typeof fields?.start_date === 'string' && fields.start_date.trim()) setStart(fields.start_date.trim());
     if (typeof fields?.end_date === 'string' && fields.end_date.trim()) setEnd(fields.end_date.trim());
@@ -324,11 +328,14 @@ export default function PlanNew() {
         setSpeechStage('initial');
       } else {
         // 当信息不完整时，清空缺失字段并标红提醒用户补全
-        const nextErrors = { destination: false, start_date: false, end_date: false, party_size: false };
+        const nextErrors = { origin: false, destination: false, start_date: false, end_date: false, party_size: false };
+        const needOrigin = !(typeof data.origin === 'string' && data.origin.trim());
         const needDest = !(typeof data.destination === 'string' && data.destination.trim());
         const needStart = !(typeof data.start_date === 'string' && data.start_date.trim());
         const needEnd = !(typeof data.end_date === 'string' && data.end_date.trim());
         const needParty = !(typeof data.party_size === 'number' && data.party_size > 0);
+        if (needOrigin) { setOrigin(''); nextErrors.origin = true; }
+        else { nextErrors.origin = false; }
         if (needDest) { setDestination(''); nextErrors.destination = true; }
         else { nextErrors.destination = false; }
         if (needStart) { setStart(''); nextErrors.start_date = true; }
@@ -354,6 +361,7 @@ export default function PlanNew() {
       <div className="grid two">
         <Card title="新建行程">
           <form onSubmit={onGenerate} className="stack">
+            <Input label="出发地" placeholder="出发地" value={origin} onChange={e => { setOrigin(e.target.value); setFieldErrors(prev => ({ ...prev, origin: false })); }} error={fieldErrors.origin} />
             <Input label="目的地" placeholder="目的地" value={destination} onChange={e => { setDestination(e.target.value); setFieldErrors(prev => ({ ...prev, destination: false })); }} error={fieldErrors.destination} />
             <div className="grid two">
               <DatePicker label="开始日期" value={start_date} onChange={v => { setStart(v); setFieldErrors(prev => ({ ...prev, start_date: false })); }} error={fieldErrors.start_date} />

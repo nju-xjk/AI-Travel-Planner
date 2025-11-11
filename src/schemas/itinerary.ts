@@ -24,6 +24,7 @@ export const ItineraryDaySchema = z.object({
 });
 
 export const ItinerarySchema = z.object({
+  origin: z.string().min(1),
   destination: z.string().min(1),
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

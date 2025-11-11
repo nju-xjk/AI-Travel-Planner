@@ -19,8 +19,8 @@ function stripCodeFences(text: string): string {
 function coerceItinerary(obj: any): GeneratedItinerary {
   // Minimal runtime shape check; full validation由 PlannerService 调用的 validateItinerary 负责
   if (!obj || typeof obj !== 'object') throw new Error('invalid itinerary object');
-  const { destination, start_date, end_date, days } = obj;
-  if (typeof destination !== 'string' || typeof start_date !== 'string' || typeof end_date !== 'string') {
+  const { origin, destination, start_date, end_date, days } = obj;
+  if (typeof origin !== 'string' || typeof destination !== 'string' || typeof start_date !== 'string' || typeof end_date !== 'string') {
     throw new Error('missing required fields');
   }
   if (!Array.isArray(days) || days.length === 0) throw new Error('days missing');
@@ -44,7 +44,8 @@ export class BailianLLMClient implements LLMClient {
       if (isPlaceholder(t)) return fallback;
       return t;
     };
-    // 强制目的地与日期与输入一致，避免模型返回占位或翻译差异
+    // 强制出发地、目的地与日期与输入一致，避免模型返回占位或翻译差异
+    it.origin = input.origin;
     it.destination = input.destination;
     it.start_date = typeof it.start_date === 'string' ? it.start_date : input.start_date;
     it.end_date = typeof it.end_date === 'string' ? it.end_date : input.end_date;
@@ -67,21 +68,23 @@ export class BailianLLMClient implements LLMClient {
   async generateItinerary(input: GenerateItineraryInput): Promise<GeneratedItinerary> {
     console.log('[BailianLLMClient] generateItinerary called with input:', JSON.stringify(input, null, 2));
     
-    const { destination, start_date, end_date, preferences, party_size, budget } = input;
+    const { origin, destination, start_date, end_date, preferences, party_size, budget } = input;
     const daysCount = calculateDaysCount(start_date, end_date);
 
     // 通过明确的提示词要求严格JSON输出，并提升行程细致度
     const prompt = [
       '你是一名专业行程规划助手。请严格只输出一个 JSON 对象（不要任何解释或附加文本、不要代码块）。',
-      '必须字段：destination, start_date, end_date, days, budget, party_size。',
+      '必须字段：origin, destination, start_date, end_date, days, budget, party_size。',
       'days 是数组，长度=行程天数；每个元素包含 day_index（从1开始递增）、segments（数组）。',
       '段落 segments：\n- 每段必须包含：title, type, costEstimate（人均CNY，数字）；\n- 强烈建议包含：timeRange（HH:MM-HH:MM）或 startTime/endTime（HH:MM），location（具体到商家/景点/酒店全称），notes（包含必要细节）；\n- type 取值：transport|accommodation|food|entertainment|attraction|shopping|other；',
       '细化要求：\n- 住宿（accommodation）：写明具体酒店名称与地址；入住/退房时间；如需押金或早餐说明写在 notes。\n- 餐饮（food）：具体餐厅名称与地址；推荐菜；人均预算；如需排队预留时间。\n- 交通（transport）：具体方式（步行/地铁/公交/打车/高铁/飞机等）、起点与终点；预计时长；费用；在 notes 中写清线路或车次。\n- 景点（attraction/entertainment）：具体景点名称；预计游玩时长；门票价格/预约说明；最佳时间段；避免高峰建议。\n- 购物（shopping）：具体商场/商业街名称；预算与停留时长。',
       '餐饮要求（关键约束）：\n- 每一天必须包含午餐与晚餐两个独立的餐饮段（type=food），可选早餐；\n- 每个餐饮段需包含：具体餐厅名称与地址（location）、时间段（timeRange，建议午餐 11:30-13:30、晚餐 18:00-20:30，可适当调整）、推荐菜（notes 中说明）、人均消费 costEstimate（CNY，数字）；\n- 如当日存在长途交通或跨城移动，仍需安排餐饮（可沿途或到达后），并在时间上合理留出；',
       '时间与节奏：\n- 每天建议≥6段，包含餐饮、交通、景点/娱乐、住宿等组合；\n- 使用 24小时制；安排合理间隔；避免不现实的行程（跨城移动需考虑时长）。',
+      '出发地与交通安排：\n- 第一天需安排从 origin 到 destination 的交通（type=transport），具体方式与时间；\n- 若 origin 与 destination 同城，则安排本地交通（如地铁/公交/打车）；\n- 建议在最后一天安排返程交通（可选），或在 notes 中说明返程建议；',
       '预算：\n- 对每段给出 costEstimate（CNY）；如不确定填近似值但不要占位符；\n- 计算并给出总 budget（该人数）。',
       '禁止：任何占位符（???/N/A）；不要输出除 JSON 外的任何文本。',
       '',
+      `origin: ${origin}`,
       `destination: ${destination}`,
       `start_date: ${start_date}`,
       `end_date: ${end_date}`,

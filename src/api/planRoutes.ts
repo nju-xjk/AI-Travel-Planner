@@ -27,6 +27,7 @@ export function createPlanRouter(db: DB, opts: { jwtSecret: string }): express.R
     try {
       const created = plans.create({
         user_id: user.id,
+        origin: it.origin,
         destination: it.destination,
         start_date: it.start_date,
         end_date: it.end_date,
@@ -37,6 +38,7 @@ export function createPlanRouter(db: DB, opts: { jwtSecret: string }): express.R
       });
       const data = {
         id: created.id,
+        origin: created.origin ?? undefined,
         destination: created.destination,
         start_date: created.start_date,
         end_date: created.end_date,
@@ -56,6 +58,7 @@ export function createPlanRouter(db: DB, opts: { jwtSecret: string }): express.R
     if (!user) return res.status(401).json({ code: 'UNAUTHORIZED', message: 'missing user' });
     const list = plans.listByUser(user.id).map(p => ({
       id: p.id,
+      origin: p.origin ?? undefined,
       destination: p.destination,
       start_date: p.start_date,
       end_date: p.end_date,
@@ -81,6 +84,7 @@ export function createPlanRouter(db: DB, opts: { jwtSecret: string }): express.R
     }));
     const data = {
       id: plan.id,
+      origin: plan.origin ?? undefined,
       destination: plan.destination,
       start_date: plan.start_date,
       end_date: plan.end_date,
@@ -128,6 +132,7 @@ export function createPlanRouter(db: DB, opts: { jwtSecret: string }): express.R
     const segments = (() => { try { return JSON.parse(day.segments_json || '[]'); } catch { return []; } })();
     const data = {
       plan_id: plan.id,
+      origin: plan.origin ?? undefined,
       destination: plan.destination,
       start_date: plan.start_date,
       end_date: plan.end_date,

@@ -1,4 +1,5 @@
 export interface GenerateItineraryInput {
+  origin: string;
   destination: string;
   start_date: string; // ISO yyyy-mm-dd
   end_date: string;   // ISO yyyy-mm-dd
@@ -22,6 +23,7 @@ export interface DaySegment {
 }
 
 export interface GeneratedItinerary {
+  origin: string;
   destination: string;
   start_date: string;
   end_date: string;

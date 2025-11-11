@@ -34,6 +34,7 @@ export function initSchema(db: DB): void {
     CREATE TABLE IF NOT EXISTS plans (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
+      origin TEXT,
       destination TEXT NOT NULL,
       start_date TEXT NOT NULL,
       end_date TEXT NOT NULL,
@@ -69,4 +70,15 @@ export function initSchema(db: DB): void {
     CREATE INDEX IF NOT EXISTS idx_expenses_plan_id ON expenses(plan_id);
   `;
   db.exec(sql);
+
+  // 迁移：确保旧数据库上存在 origin 列
+  try {
+    const cols = db.prepare('PRAGMA table_info(plans)').all() as Array<{ name: string }>;
+    const hasOrigin = cols.some(c => c.name === 'origin');
+    if (!hasOrigin) {
+      db.exec('ALTER TABLE plans ADD COLUMN origin TEXT');
+    }
+  } catch {
+    // ignore migration errors
+  }
 }

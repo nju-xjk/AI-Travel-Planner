@@ -6,6 +6,7 @@ import Button from '../components/Button';
 
 type PlanBasic = {
   id: number;
+  origin?: string;
   destination: string;
   start_date: string;
   end_date: string;
@@ -74,7 +75,7 @@ export default function MyPlans() {
               <div key={p.id} className="card" style={{ padding: 12, borderRadius: 12, border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ fontWeight: 600 }}>{p.destination}</div>
+                    <div style={{ fontWeight: 600 }}>{p.origin ? `${p.origin} → ${p.destination}` : p.destination}</div>
                     <div className="note">{p.start_date} ~ {p.end_date}{p.party_size ? ` · ${p.party_size}人` : ''}{p.budget ? ` · 预算¥${p.budget}` : ''}</div>
                     <div className="note">保存于 {new Date(p.created_at).toLocaleString()}</div>
                   </div>

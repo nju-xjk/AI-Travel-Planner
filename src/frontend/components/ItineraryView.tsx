@@ -15,6 +15,7 @@ type DaySegment = {
 type ItineraryDay = { day_index: number; segments: DaySegment[]; dayBudget?: number };
 
 type Itinerary = {
+  origin?: string;
   destination: string;
   start_date: string;
   end_date: string;
@@ -54,7 +55,7 @@ export default function ItineraryView({ itinerary, singleDayIndex }: { itinerary
   return (
     <Card>
       <div className="itinerary-header">
-        <div className="itinerary-title">📍 {itinerary.destination}</div>
+        <div className="itinerary-title">📍 {itinerary.origin ? `${itinerary.origin} → ${itinerary.destination}` : itinerary.destination}</div>
         <div className="itinerary-dates">🗓️ {itinerary.start_date} → {itinerary.end_date}</div>
         {/* 全局总预算不再显示，改为“当天预算”在各天标题处展示 */}
       </div>
