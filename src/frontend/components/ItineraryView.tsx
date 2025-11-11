@@ -45,7 +45,7 @@ function formatTime(seg: DaySegment): string | null {
   return null;
 }
 
-export default function ItineraryView({ itinerary, singleDayIndex }: { itinerary: Itinerary; singleDayIndex?: number }) {
+export default function ItineraryView({ itinerary, singleDayIndex, hideHeaderMeta }: { itinerary: Itinerary; singleDayIndex?: number; hideHeaderMeta?: boolean }) {
   const [openDays, setOpenDays] = React.useState<Record<number, boolean>>(() => {
     const init: Record<number, boolean> = {};
     for (const d of itinerary.days || []) init[d.day_index] = true;
@@ -67,13 +67,15 @@ export default function ItineraryView({ itinerary, singleDayIndex }: { itinerary
 
   return (
     <Card>
-      <div className="itinerary-header">
-        <div className="itinerary-title">📍 {itinerary.origin ? `${itinerary.origin} → ${itinerary.destination}` : itinerary.destination}</div>
-        <div className="itinerary-dates">🗓️ {itinerary.start_date} → {itinerary.end_date}</div>
-        {totalBudget > 0 && (
-          <div className="itinerary-total">💰 总预算：¥{Math.round(totalBudget)}</div>
-        )}
-      </div>
+      {!hideHeaderMeta && (
+        <div className="itinerary-header">
+          <div className="itinerary-title">📍 {itinerary.origin ? `${itinerary.origin} → ${itinerary.destination}` : itinerary.destination}</div>
+          <div className="itinerary-dates">🗓️ {itinerary.start_date} → {itinerary.end_date}</div>
+          {totalBudget > 0 && (
+            <div className="itinerary-total">💰 总预算：¥{Math.round(totalBudget)}</div>
+          )}
+        </div>
+      )}
       {Array.isArray(itinerary.warnings) && itinerary.warnings.length > 0 && (
         <div className="warnings" style={{ marginTop: 8 }}>
           {itinerary.warnings.map((w, i) => (

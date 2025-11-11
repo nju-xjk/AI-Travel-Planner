@@ -564,6 +564,29 @@ export default function PlanNew() {
               )}
             >
               <div className="stack" style={{ gap: 16 }}>
+                {/* 元信息模块：以 Card 包裹，居中展示地点、日期、总预算（无标题） */}
+                <Card>
+                  <div className="meta-bar">
+                    <span className="meta-chip"><strong>📍</strong> {result.origin ? `${result.origin} → ${result.destination}` : result.destination}</span>
+                    <span className="meta-chip"><strong>🗓️</strong> {result.start_date} → {result.end_date}</span>
+                    {(() => {
+                      const days = result?.days || [];
+                      let total = typeof result?.budget === 'number' ? Number(result.budget) : 0;
+                      if (!total) {
+                        let sumDay = 0; let hasDay = false;
+                        days.forEach((d: any) => { if (typeof d?.dayBudget === 'number') { sumDay += Number(d.dayBudget); hasDay = true; } });
+                        total = hasDay ? sumDay : 0;
+                      }
+                      if (!total) {
+                        let sumSeg = 0;
+                        days.forEach((d: any) => (d?.segments || []).forEach((s: any) => { if (typeof s?.costEstimate === 'number') sumSeg += Number(s.costEstimate); }));
+                        total = sumSeg;
+                      }
+                      return total > 0 ? <span className="meta-chip"><strong>💰</strong> 总预算：¥{Math.round(total)}</span> : null;
+                    })()}
+                  </div>
+                </Card>
+
                 <Card title="选择查看的日期">
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {(result.days || []).map((_: any, idx: number) => (
@@ -586,7 +609,7 @@ export default function PlanNew() {
 
                 <div className="grid two">
                   <div className={((result.days?.[selectedDay]?.segments || []).length) < 4 ? 'fit-column' : undefined} style={{ minHeight: ((result.days?.[selectedDay]?.segments || []).length) < 4 ? 550 : undefined }}>
-                    <ItineraryView itinerary={result} singleDayIndex={selectedDay} />
+                    <ItineraryView itinerary={result} singleDayIndex={selectedDay} hideHeaderMeta={true} />
                   </div>
                   <MapView itinerary={result} apiKey={baiduAk} dayIndex={selectedDay} hideControls={true} />
                 </div>
