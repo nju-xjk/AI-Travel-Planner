@@ -73,12 +73,12 @@ export class PlannerService {
       throw err;
     }
     const llm = this.getLLMClient();
-    const cfg = this.settings.getSettings();
     const env = process.env.NODE_ENV || 'development';
-    const MAX_RETRIES = Number.isFinite(cfg.LLM_MAX_RETRIES as any) ? Number(cfg.LLM_MAX_RETRIES) : 2;
-    const TIMEOUT_MS = env === 'test'
-      ? 1000
-      : (Number.isFinite(cfg.LLM_TIMEOUT_MS as any) ? Number(cfg.LLM_TIMEOUT_MS) : 1000);
+    // Move timeout and retries from config to code defaults
+    const DEFAULT_LLM_MAX_RETRIES = 2;
+    const DEFAULT_LLM_TIMEOUT_MS = 120000; // 120s by default
+    const MAX_RETRIES = DEFAULT_LLM_MAX_RETRIES;
+    const TIMEOUT_MS = env === 'test' ? 1000 : DEFAULT_LLM_TIMEOUT_MS;
     metrics.planner.total_generations += 1;
 
     const callWithTimeout = <T>(p: Promise<T>, ms: number): Promise<T> => {

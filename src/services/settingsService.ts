@@ -7,8 +7,6 @@ export interface Settings {
   XF_API_KEY?: string;
   XF_API_SECRET?: string;
   XF_APP_ID?: string;
-  LLM_TIMEOUT_MS?: number;
-  LLM_MAX_RETRIES?: number;
   BUDGET_COEFF_TRANSPORT?: number;
   BUDGET_COEFF_FOOD?: number;
   BUDGET_COEFF_ENTERTAINMENT?: number;
@@ -40,7 +38,7 @@ export class SettingsService {
 
   validate(payload: any, current?: Settings): { valid: boolean; message?: string } {
     const allowedKeys = [
-      'BAILIAN_API_KEY', 'BAIDU_BROWSER_AK', 'XF_API_KEY', 'XF_API_SECRET', 'XF_APP_ID', 'LLM_TIMEOUT_MS', 'LLM_MAX_RETRIES',
+      'BAILIAN_API_KEY', 'BAIDU_BROWSER_AK', 'XF_API_KEY', 'XF_API_SECRET', 'XF_APP_ID',
       'BUDGET_COEFF_TRANSPORT', 'BUDGET_COEFF_FOOD', 'BUDGET_COEFF_ENTERTAINMENT', 'BUDGET_COEFF_ACCOMMODATION', 'BUDGET_COEFF_SHOPPING', 'BUDGET_COEFF_OTHER',
       // Removed daily budget factor keys (BUDGET_PERDAY_*)
     ];
@@ -50,21 +48,9 @@ export class SettingsService {
         return { valid: false, message: `unknown key: ${k}` };
       }
       const v = payload[k];
-      if (k === 'LLM_TIMEOUT_MS' || k === 'LLM_MAX_RETRIES' || k.startsWith('BUDGET_')) {
+      if (k.startsWith('BUDGET_')) {
         if (v != null && typeof v !== 'number') {
           return { valid: false, message: `key ${k} must be number` };
-        }
-        if (k === 'LLM_TIMEOUT_MS') {
-          const ms = Number(v);
-          if (v != null && (!Number.isFinite(ms) || ms < 100 || ms > 60000)) {
-            return { valid: false, message: 'LLM_TIMEOUT_MS must be between 100 and 60000' };
-          }
-        }
-        if (k === 'LLM_MAX_RETRIES') {
-          const r = Number(v);
-          if (v != null && (!Number.isFinite(r) || r < 0 || r > 5)) {
-            return { valid: false, message: 'LLM_MAX_RETRIES must be between 0 and 5' };
-          }
         }
         if (k.startsWith('BUDGET_COEFF_')) {
           const n = Number(v);
