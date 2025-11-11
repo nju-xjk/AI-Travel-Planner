@@ -148,11 +148,21 @@ body {
 
 /* Speech module staged UI */
 .speech-card { min-height: 360px; display: flex; align-items: center; justify-content: center; padding: 16px 0; }
-.speech-module { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.speech-module { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; min-height: 320px; }
 .speech-stage { display: flex; flex-direction: column; align-items: center; gap: 18px; transition: opacity 0.2s ease, transform 0.2s ease; }
 .speech-actions { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
 .speech-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .speech-player { width: min(640px, 90%); }
+
+/* Ensure the speech card content is centered within the card's content area (below title) */
+.card:has(.speech-card) > div {
+  /* Center children (the speech-card) in the available content area */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Slightly larger min-height so visual center accounts for the title height */
+  min-height: 420px;
+}
 .circle-btn {
   width: 84px; height: 84px; border-radius: 999px; border: 1px solid var(--border);
   display: inline-flex; align-items: center; justify-content: center;
