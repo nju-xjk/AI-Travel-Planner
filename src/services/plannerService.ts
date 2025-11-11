@@ -116,24 +116,20 @@ export class PlannerService {
           if (attempt < MAX_RETRIES) metrics.planner.retries += 1;
           continue; // retry
         }
-        // 质量评估：测试环境跳过，生产环境需达到阈值
-        // 质量评估：测试环境跳过，生产环境需达到阈值
+        // 质量评估：测试环境跳过；生产环境若不达标，返回行程并附加 warnings（不再视为失败）
         const envCheck = env;
+        let warnings: string[] = [];
         if (envCheck !== 'test') {
           const quality = evaluateItineraryQuality(result);
           if (!quality.ok) {
-            const err: any = new Error('itinerary quality insufficient');
-            err.code = 'BAD_GATEWAY';
-            lastError = err;
             try {
-              console.warn('[PlannerService] Quality insufficient:', `score=${quality.score}`, 'reasons=', quality.reasons);
+              console.warn('[PlannerService] Quality insufficient (will return with warnings):', `score=${quality.score}`, 'reasons=', quality.reasons);
             } catch {}
-            metrics.planner.invalid += 1;
-            if (attempt < MAX_RETRIES) metrics.planner.retries += 1;
-            continue; // retry on low quality
+            warnings = quality.reasons || [];
           }
         }
         const normalized = this.normalizeItinerary(input, result);
+        if (warnings.length) (normalized as any).warnings = warnings;
         metrics.planner.success += 1;
         return normalized;
       } catch (e: any) {

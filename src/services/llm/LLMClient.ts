@@ -31,6 +31,8 @@ export interface GeneratedItinerary {
   // Optional fields predicted or echoed by the model
   budget?: number;
   party_size?: number;
+  // Backend annotations: non-fatal issues to display as warnings in UI
+  warnings?: string[];
 }
 
 export interface LLMClient {

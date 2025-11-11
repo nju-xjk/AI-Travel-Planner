@@ -21,6 +21,8 @@ type Itinerary = {
   end_date: string;
   days: ItineraryDay[];
   budget?: number;
+  // 后端可能附加的非致命问题
+  warnings?: string[];
 };
 
 function typeIcon(type?: DaySegment['type']): string {
@@ -59,6 +61,13 @@ export default function ItineraryView({ itinerary, singleDayIndex }: { itinerary
         <div className="itinerary-dates">🗓️ {itinerary.start_date} → {itinerary.end_date}</div>
         {/* 全局总预算不再显示，改为“当天预算”在各天标题处展示 */}
       </div>
+      {Array.isArray(itinerary.warnings) && itinerary.warnings.length > 0 && (
+        <div className="warnings" style={{ marginTop: 8 }}>
+          {itinerary.warnings.map((w, i) => (
+            <span key={i} className="warning-chip">⚠️ {w}</span>
+          ))}
+        </div>
+      )}
       <div className="itinerary-days">
         {(typeof singleDayIndex === 'number' ? [itinerary.days[singleDayIndex]].filter(Boolean) : itinerary.days).map((day) => (
           <div key={day.day_index} className="itinerary-day">

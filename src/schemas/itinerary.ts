@@ -131,13 +131,14 @@ export function evaluateItineraryQuality(it: any): { ok: boolean; score: number;
     score += 10;
   }
 
-  // 规则7（关键约束）：每天至少包含午餐与晚餐两个餐饮段（type=food）
-  const daysMealsOk = days.every(d => {
+  // 规则7（关键约束）：除第一天与最后一天外，中间行程天至少包含午餐与晚餐两个餐饮段（type=food）
+  const middleDays = days.slice(1, Math.max(1, days.length - 1));
+  const daysMealsOk = middleDays.every(d => {
     const foodCount = (d.segments || []).filter(s => ((s as any).type || '') === 'food').length;
     return foodCount >= 2; // 至少午餐与晚餐
   });
   if (!daysMealsOk) {
-    reasons.push('meals missing: 每天至少午餐与晚餐 (type=food)');
+    reasons.push('meals missing: 中间天至少午餐与晚餐 (type=food)');
   } else {
     score += 10;
   }
