@@ -425,7 +425,11 @@ export default function MapView({ itinerary, apiKey, dayIndex: dayIndexProp, hid
         </div>
       )}
       {apiKey && (
-        <div ref={containerRef} style={{ height: 360, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', marginBottom: 12 }} />
+        <div
+          ref={containerRef}
+          className="map-container"
+          style={{ width: '100%', minHeight: 360, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', marginBottom: 12 }}
+        />
       )}
       {(!apiKey || !ready) && (
         <div className="stack">
