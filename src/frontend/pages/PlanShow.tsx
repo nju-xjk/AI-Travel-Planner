@@ -151,7 +151,9 @@ export default function PlanShow() {
           </Card>
 
           <div className="grid two">
-            <ItineraryView itinerary={plan as any} singleDayIndex={selectedDay} />
+            <div className={((plan.days?.[selectedDay]?.segments || []).length) < 4 ? 'fit-column' : undefined} style={{ minHeight: ((plan.days?.[selectedDay]?.segments || []).length) < 4 ? 550 : undefined }}>
+              <ItineraryView itinerary={plan as any} singleDayIndex={selectedDay} />
+            </div>
             <MapView itinerary={plan as any} apiKey={baiduAk} dayIndex={selectedDay} hideControls={true} />
           </div>
 

@@ -585,10 +585,12 @@ export default function PlanNew() {
                 </Card>
 
                 <div className="grid two">
-                  <ItineraryView itinerary={result} singleDayIndex={selectedDay} />
+                  <div className={((result.days?.[selectedDay]?.segments || []).length) < 4 ? 'fit-column' : undefined} style={{ minHeight: ((result.days?.[selectedDay]?.segments || []).length) < 4 ? 550 : undefined }}>
+                    <ItineraryView itinerary={result} singleDayIndex={selectedDay} />
+                  </div>
                   <MapView itinerary={result} apiKey={baiduAk} dayIndex={selectedDay} hideControls={true} />
                 </div>
-              </div>
+                </div>
             </Card>
           </div>
         )}
