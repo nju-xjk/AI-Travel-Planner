@@ -14,7 +14,7 @@ export default function PlanNew() {
   const navigate = useNavigate();
   const CACHE_KEY = 'plan_new_cache_v1';
   const [origin, setOrigin] = useState('');
-  const [destination, setDestination] = useState('南京');
+  const [destination, setDestination] = useState('');
   // 默认开始日期为今天、结束日期为次日
   const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
   const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -108,6 +108,24 @@ export default function PlanNew() {
     e.preventDefault();
     setMsg('');
     setResult(null);
+    // 前端必填校验：出发地、目的地、开始/结束日期、同行人数
+    const needOrigin = !(typeof origin === 'string' && origin.trim());
+    const needDest = !(typeof destination === 'string' && destination.trim());
+    const needStart = !(typeof start_date === 'string' && start_date.trim());
+    const needEnd = !(typeof end_date === 'string' && end_date.trim());
+    const needParty = !(partySize !== '' && Number(partySize) > 0);
+    const nextErrors = {
+      origin: needOrigin,
+      destination: needDest,
+      start_date: needStart,
+      end_date: needEnd,
+      party_size: needParty,
+    };
+    setFieldErrors(nextErrors);
+    if (needOrigin || needDest || needStart || needEnd || needParty) {
+      setMsg('请补全必填项：出发地、目的地、开始日期、结束日期、同行人数');
+      return;
+    }
     setLoading(true);
     await generateCurrent();
   };
