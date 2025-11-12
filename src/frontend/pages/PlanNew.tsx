@@ -606,8 +606,14 @@ export default function PlanNew() {
             )}
 
             {speechStage === 'error' && (
-              <div className="speech-module">
-                <div className="kpi">{speechMsg || '识别的内容与行程信息无关，请重新录音/上传音频'}</div>
+              <div className="speech-module" style={{ width: 'min(680px, 92%)' }}>
+                <div className="alert alert-error" role="alert">
+                  <div className="alert-icon">⚠️</div>
+                  <div className="alert-content">
+                    <div className="alert-title">识别失败</div>
+                    <div className="alert-desc">{speechMsg || '识别的内容与行程信息无关，请重新录音或上传音频后重试。'}</div>
+                  </div>
+                </div>
                 <div className="speech-actions">
                   <Button type="button" onClick={handleReInput}>{speechSource === 'upload' ? '重新上传' : '重新录音'}</Button>
                   <Button type="button" onClick={() => setSpeechStage('initial')}>退出</Button>
