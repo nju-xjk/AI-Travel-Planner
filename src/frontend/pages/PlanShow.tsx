@@ -107,6 +107,22 @@ export default function PlanShow() {
     loadExpenses();
   }, [loadExpenses]);
 
+  // 删除支出
+  const [deletingId, setDeletingId] = React.useState<number | null>(null);
+  const onDeleteExpense = async (id: number) => {
+    if (!id || !plan?.id) return;
+    setExpMsg('');
+    setDeletingId(id);
+    const res = await api<{ id: number }>(`/expenses/${id}`, { method: 'DELETE' });
+    setDeletingId(null);
+    if (res.data?.id === id) {
+      setExpMsg('删除成功');
+      await loadExpenses();
+    } else {
+      setExpMsg(res.message || '删除失败');
+    }
+  };
+
   const onAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     setExpMsg('');
@@ -298,6 +314,7 @@ export default function PlanShow() {
                           <th style={{ textAlign: 'right', padding: 8, borderBottom: '1px solid var(--border)' }}>金额</th>
                           <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--border)' }}>类别</th>
                           <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--border)' }}>备注</th>
+                          <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--border)' }}>操作</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -307,6 +324,14 @@ export default function PlanShow() {
                             <td style={{ padding: 8, borderBottom: '1px solid var(--border)', textAlign: 'right' }}>¥ {r.amount.toFixed(2)}</td>
                             <td style={{ padding: 8, borderBottom: '1px solid var(--border)' }}>{categoryLabels[r.category]}</td>
                             <td style={{ padding: 8, borderBottom: '1px solid var(--border)' }}>{r.note || ''}</td>
+                            <td style={{ padding: 8, borderBottom: '1px solid var(--border)' }}>
+                              <Button
+                                type="button"
+                                variant="danger"
+                                onClick={() => onDeleteExpense(r.id)}
+                                disabled={deletingId === r.id}
+                              >{deletingId === r.id ? '删除中…' : '删除'}</Button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
