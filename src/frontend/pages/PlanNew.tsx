@@ -332,7 +332,7 @@ export default function PlanNew() {
       form.append('audio', audioFile);
       form.append('language', language);
       const token = localStorage.getItem('token');
-      const res = await fetch('/speech/recognize', {
+      const res = await fetch('/api/speech/recognize', {
         method: 'POST',
         body: form,
         headers: token ? { Authorization: `Bearer ${token}` } : undefined
@@ -377,7 +377,7 @@ export default function PlanNew() {
     setSpeechMsg('');
     setExtracting(true);
     try {
-      const resp = await fetch('/planner/extract', {
+      const resp = await fetch('/api/planner/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: editableText })
