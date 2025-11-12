@@ -1,14 +1,27 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { getToken, getEmailFromToken, clearToken } from '../auth';
+import { getToken, clearToken } from '../auth';
+import { api } from '../api';
 
 export default function NavBar() {
   const navigate = useNavigate();
-  const [email, setEmail] = React.useState<string | null>(getEmailFromToken(getToken()));
+  const [email, setEmail] = React.useState<string | null>(null);
   const [open, setOpen] = React.useState(false);
 
   React.useEffect(() => {
-    const onChange = () => setEmail(getEmailFromToken(getToken()));
+    const fetchEmail = async () => {
+      const token = getToken();
+      if (!token) { setEmail(null); return; }
+      try {
+        const me = await api<{ id: number; email: string }>("/auth/me");
+        if (me?.data?.email) setEmail(me.data.email);
+        else setEmail(null);
+      } catch {
+        setEmail(null);
+      }
+    };
+    const onChange = () => { fetchEmail(); };
+    fetchEmail();
     window.addEventListener('auth-changed', onChange);
     return () => window.removeEventListener('auth-changed', onChange);
   }, []);

@@ -28,7 +28,8 @@ export function initSchema(db: DB): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      preferences_text TEXT
     );
 
     CREATE TABLE IF NOT EXISTS plans (
@@ -77,6 +78,17 @@ export function initSchema(db: DB): void {
     const hasOrigin = cols.some(c => c.name === 'origin');
     if (!hasOrigin) {
       db.exec('ALTER TABLE plans ADD COLUMN origin TEXT');
+    }
+  } catch {
+    // ignore migration errors
+  }
+
+  // 迁移：为 users 表添加 preferences_text 列（用于存储用户偏好）
+  try {
+    const userCols = db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>;
+    const hasPrefText = userCols.some(c => c.name === 'preferences_text');
+    if (!hasPrefText) {
+      db.exec('ALTER TABLE users ADD COLUMN preferences_text TEXT');
     }
   } catch {
     // ignore migration errors

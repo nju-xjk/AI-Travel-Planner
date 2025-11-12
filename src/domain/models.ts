@@ -3,6 +3,7 @@ export interface User {
   email: string;
   password_hash: string;
   created_at: string; // ISO string
+  preferences_text?: string | null;
 }
 
 export interface Preferences {

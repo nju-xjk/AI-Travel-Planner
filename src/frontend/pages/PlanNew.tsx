@@ -24,6 +24,7 @@ export default function PlanNew() {
   const [start_date, setStart] = useState(defaultStart);
   const [end_date, setEnd] = useState(defaultEnd);
   const [preferencesText, setPreferencesText] = useState('');
+  const preferencesInitRef = React.useRef(false);
   const [result, setResult] = useState<any>(null);
   const [selectedDay, setSelectedDay] = useState<number>(0);
   const [msg, setMsg] = useState('');
@@ -71,6 +72,20 @@ export default function PlanNew() {
     } catch { /* ignore parse error */ }
   }, []);
 
+  // 初始化：从个人设置拉取偏好并填充，但不计入“未保存缓存”
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const pref = await api<{ preferencesText: string }>("/auth/me/preferences");
+        const text = pref?.data?.preferencesText;
+        if (typeof text === 'string' && text.trim()) {
+          setPreferencesText(text);
+          preferencesInitRef.current = true;
+        }
+      } catch { /* ignore */ }
+    })();
+  }, []);
+
   const applyCache = () => {
     const cache = cacheData;
     if (!cache) { setCachePromptOpen(false); return; }
@@ -78,7 +93,7 @@ export default function PlanNew() {
     if (typeof cache.destination === 'string') setDestination(cache.destination);
     if (typeof cache.start_date === 'string') setStart(cache.start_date);
     if (typeof cache.end_date === 'string') setEnd(cache.end_date);
-    if (typeof cache.preferencesText === 'string') setPreferencesText(cache.preferencesText);
+    if (typeof cache.preferencesText === 'string') { setPreferencesText(cache.preferencesText); preferencesInitRef.current = false; }
     if (typeof cache.partySize === 'number' || cache.partySize === '') setPartySize(cache.partySize);
     if (typeof cache.budgetHint === 'number' || cache.budgetHint === '') setBudgetHint(cache.budgetHint);
     if (cache.result) setResult(cache.result);
@@ -96,6 +111,7 @@ export default function PlanNew() {
     setStart(defaultStart);
     setEnd(defaultEnd);
     setPreferencesText('');
+    preferencesInitRef.current = false;
     setPartySize('');
     setBudgetHint('');
     setResult(null);
@@ -119,7 +135,7 @@ export default function PlanNew() {
     const hasMeaningful = (
       (typeof origin === 'string' && origin.trim()) ||
       (typeof destination === 'string' && destination.trim()) ||
-      (typeof preferencesText === 'string' && preferencesText.trim()) ||
+      (!preferencesInitRef.current && typeof preferencesText === 'string' && preferencesText.trim()) ||
       // 注意：默认同行人数为 1，不应单独触发缓存
       (partySize !== '' && Number(partySize) > 1) ||
       (budgetHint !== '' && Number(budgetHint) > 0) ||
@@ -435,7 +451,7 @@ export default function PlanNew() {
                 rows={3}
                 placeholder="例如：节奏偏慢、偏好博物馆、避开拥挤景点"
                 value={preferencesText}
-                onChange={e => setPreferencesText(e.target.value)}
+                onChange={e => { preferencesInitRef.current = false; setPreferencesText(e.target.value); }}
                 style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--fg)' }}
               />
             </div>
@@ -511,6 +527,7 @@ export default function PlanNew() {
                       }}>填充到目的地</Button>
                       <Button type="button" onClick={() => {
                         if (speechText && speechText.trim()) {
+                          preferencesInitRef.current = false;
                           setPreferencesText(prev => (prev ? `${prev}\n${speechText.trim()}` : speechText.trim()));
                           setSpeechMsg('已追加到偏好');
                         }
@@ -549,6 +566,7 @@ export default function PlanNew() {
                       }}>填充到目的地</Button>
                       <Button type="button" onClick={() => {
                         if (speechText && speechText.trim()) {
+                          preferencesInitRef.current = false;
                           setPreferencesText(prev => (prev ? `${prev}\n${speechText.trim()}` : speechText.trim()));
                           setSpeechMsg('已追加到偏好');
                         }

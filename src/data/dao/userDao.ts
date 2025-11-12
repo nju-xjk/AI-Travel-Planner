@@ -31,4 +31,19 @@ export class UserDAO {
     const info = this.db.prepare('DELETE FROM users WHERE id = ?').run(id);
     return info.changes;
   }
+
+  updateEmail(id: number, email: string): number {
+    const info = this.db.prepare('UPDATE users SET email = ? WHERE id = ?').run(email, id);
+    return info.changes;
+  }
+
+  updatePasswordHash(id: number, password_hash: string): number {
+    const info = this.db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(password_hash, id);
+    return info.changes;
+  }
+
+  updatePreferencesText(id: number, text: string | null): number {
+    const info = this.db.prepare('UPDATE users SET preferences_text = ? WHERE id = ?').run(text ?? null, id);
+    return info.changes;
+  }
 }
