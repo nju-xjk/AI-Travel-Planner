@@ -56,26 +56,54 @@ export default function PlanNew() {
   const [partySize, setPartySize] = useState<number | ''>(1);
   const [budgetHint, setBudgetHint] = useState<number | ''>('');
   const [fieldErrors, setFieldErrors] = useState<{ origin: boolean; destination: boolean; start_date: boolean; end_date: boolean; party_size: boolean }>(() => ({ origin: false, destination: false, start_date: false, end_date: false, party_size: false }));
+  // 未保存缓存提示弹窗控制
+  const [cachePromptOpen, setCachePromptOpen] = useState(false);
+  const [cacheData, setCacheData] = useState<any | null>(null);
 
-  // 初次挂载时，从本地缓存恢复页面状态
+  // 初次挂载时，仅检测本地缓存，弹窗询问是否查看或放弃
   React.useEffect(() => {
     try {
       const raw = localStorage.getItem(CACHE_KEY);
       if (!raw) return;
       const cache = JSON.parse(raw);
-      if (typeof cache.origin === 'string') setOrigin(cache.origin);
-      if (typeof cache.destination === 'string') setDestination(cache.destination);
-      if (typeof cache.start_date === 'string') setStart(cache.start_date);
-      if (typeof cache.end_date === 'string') setEnd(cache.end_date);
-      if (typeof cache.preferencesText === 'string') setPreferencesText(cache.preferencesText);
-      if (typeof cache.partySize === 'number' || cache.partySize === '') setPartySize(cache.partySize);
-      if (typeof cache.budgetHint === 'number' || cache.budgetHint === '') setBudgetHint(cache.budgetHint);
-      if (cache.result) setResult(cache.result);
-      if (typeof cache.selectedDay === 'number') setSelectedDay(cache.selectedDay);
+      setCacheData(cache);
+      setCachePromptOpen(true);
     } catch { /* ignore parse error */ }
   }, []);
 
-  // 当关键字段变化时，写入本地缓存，确保切页返回后仍保留
+  const applyCache = () => {
+    const cache = cacheData;
+    if (!cache) { setCachePromptOpen(false); return; }
+    if (typeof cache.origin === 'string') setOrigin(cache.origin);
+    if (typeof cache.destination === 'string') setDestination(cache.destination);
+    if (typeof cache.start_date === 'string') setStart(cache.start_date);
+    if (typeof cache.end_date === 'string') setEnd(cache.end_date);
+    if (typeof cache.preferencesText === 'string') setPreferencesText(cache.preferencesText);
+    if (typeof cache.partySize === 'number' || cache.partySize === '') setPartySize(cache.partySize);
+    if (typeof cache.budgetHint === 'number' || cache.budgetHint === '') setBudgetHint(cache.budgetHint);
+    if (cache.result) setResult(cache.result);
+    if (typeof cache.selectedDay === 'number') setSelectedDay(cache.selectedDay);
+    setCachePromptOpen(false);
+  };
+
+  const discardCache = () => {
+    try { localStorage.removeItem(CACHE_KEY); } catch {}
+    setCacheData(null);
+    setCachePromptOpen(false);
+    // 重置为初始新建行程状态
+    setOrigin('');
+    setDestination('');
+    setStart(defaultStart);
+    setEnd(defaultEnd);
+    setPreferencesText('');
+    setPartySize('');
+    setBudgetHint('');
+    setResult(null);
+    setSelectedDay(0);
+    setMsg('');
+  };
+
+  // 当关键字段变化时，写入/清理本地缓存：若数据均为空则移除缓存
   React.useEffect(() => {
     const data = {
       origin,
@@ -88,8 +116,18 @@ export default function PlanNew() {
       result,
       selectedDay
     };
+    const hasMeaningful = (
+      (typeof origin === 'string' && origin.trim()) ||
+      (typeof destination === 'string' && destination.trim()) ||
+      (typeof preferencesText === 'string' && preferencesText.trim()) ||
+      // 注意：默认同行人数为 1，不应单独触发缓存
+      (partySize !== '' && Number(partySize) > 1) ||
+      (budgetHint !== '' && Number(budgetHint) > 0) ||
+      !!result
+    );
     try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+      if (hasMeaningful) localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+      else localStorage.removeItem(CACHE_KEY);
     } catch { /* ignore storage error */ }
   }, [origin, destination, start_date, end_date, preferencesText, partySize, budgetHint, result, selectedDay]);
 
@@ -161,6 +199,8 @@ export default function PlanNew() {
       setMsg(res.message || '保存失败');
       return;
     }
+    // 保存成功后立即清空页面缓存，确保缓存仅用于未保存行程
+    try { localStorage.removeItem(CACHE_KEY); } catch {}
     navigate(`/plan/${res.data.id}`);
   };
 
@@ -618,8 +658,19 @@ export default function PlanNew() {
           </div>
         )}
       </div>
-
-
+      {/* 未保存缓存提示弹窗 */}
+      {cachePromptOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ width: 'min(520px, 95%)', background: 'var(--bg)', color: 'var(--fg)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, boxShadow: '0 8px 30px rgba(0,0,0,0.4)' }}>
+            <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>提示</div>
+            <div style={{ marginBottom: 16 }}>该页面包含未保存的数据，是否查看？</div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <Button type="button" onClick={discardCache}>放弃</Button>
+              <Button type="button" variant="primary" onClick={applyCache}>查看</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
