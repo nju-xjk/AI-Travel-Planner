@@ -73,18 +73,24 @@ export default function PlanNew() {
   }, []);
 
   // 初始化：从个人设置拉取偏好并填充，但不计入“未保存缓存”
-  React.useEffect(() => {
-    (async () => {
-      try {
-        const pref = await api<{ preferencesText: string }>("/auth/me/preferences");
-        const text = pref?.data?.preferencesText;
-        if (typeof text === 'string' && text.trim()) {
-          setPreferencesText(text);
-          preferencesInitRef.current = true;
-        }
-      } catch { /* ignore */ }
-    })();
+  const loadPreferencesFromSettings = React.useCallback(async () => {
+    try {
+      const pref = await api<{ preferencesText: string }>("/auth/me/preferences");
+      const text = pref?.data?.preferencesText;
+      if (typeof text === 'string' && text.trim()) {
+        setPreferencesText(text);
+        preferencesInitRef.current = true;
+      } else {
+        // 若设置为空，则保持为空，并允许后续用户编辑计入未保存状态
+        setPreferencesText('');
+        preferencesInitRef.current = false;
+      }
+    } catch { /* ignore */ }
   }, []);
+
+  React.useEffect(() => {
+    loadPreferencesFromSettings();
+  }, [loadPreferencesFromSettings]);
 
   const applyCache = () => {
     const cache = cacheData;
@@ -112,11 +118,13 @@ export default function PlanNew() {
     setEnd(defaultEnd);
     setPreferencesText('');
     preferencesInitRef.current = false;
-    setPartySize('');
+    setPartySize(1);
     setBudgetHint('');
     setResult(null);
     setSelectedDay(0);
     setMsg('');
+    // 清缓存后，按设置重载偏好（若为空则保持为空）
+    loadPreferencesFromSettings();
   };
 
   // 当关键字段变化时，写入/清理本地缓存：若数据均为空则移除缓存
