@@ -13,7 +13,7 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
         <Card title="需要登录">
           <div className="stack">
             <div>该功能需要登录，请先登录后再访问。</div>
-            <div>
+            <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
               <Button type="button" variant="primary" onClick={() => navigate('/login')}>去登录</Button>
             </div>
           </div>
