@@ -32,6 +32,14 @@ export default function PlanShow() {
   type ExpenseRecord = { id: number; plan_id: number; date: string; amount: number; category: ExpenseCategory; note?: string | null };
   type ExpenseStats = { total: number; byCategory: Record<string, number> };
   const categories: ExpenseCategory[] = ['transport','accommodation','food','entertainment','shopping','other'];
+  const categoryLabels: Record<ExpenseCategory, string> = {
+    transport: '交通',
+    accommodation: '住宿',
+    food: '餐饮',
+    entertainment: '景点/娱乐',
+    shopping: '购物',
+    other: '其他'
+  };
   const today = (): string => {
     const d = new Date();
     const y = d.getFullYear();
@@ -201,7 +209,7 @@ export default function PlanShow() {
                 <div className="row" style={{ gap: 12, alignItems: 'center' }}>
                   <div className="label">类别</div>
                   <select value={category} onChange={e => setCategory(e.target.value as ExpenseCategory)} style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)' }}>
-                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                    {categories.map(c => <option key={c} value={c}>{categoryLabels[c]}</option>)}
                   </select>
                 </div>
                 <Input label="备注" placeholder="可选" value={note} onChange={e => setNote(e.target.value)} />
@@ -219,7 +227,7 @@ export default function PlanShow() {
                   <div className="kpi">总额：¥ {expStats.total.toFixed(2)}</div>
                   <ul style={{ paddingLeft: 16 }}>
                     {categories.map(c => (
-                      <li key={c}>{c}: ¥ {(expStats.byCategory?.[c] || 0).toFixed(2)}</li>
+                      <li key={c}>{categoryLabels[c]}: ¥ {(expStats.byCategory?.[c] || 0).toFixed(2)}</li>
                     ))}
                   </ul>
                 </div>
@@ -249,7 +257,7 @@ export default function PlanShow() {
                       <tr key={r.id}>
                         <td style={{ padding: 8, borderBottom: '1px solid var(--border)' }}>{r.date}</td>
                         <td style={{ padding: 8, borderBottom: '1px solid var(--border)', textAlign: 'right' }}>¥ {r.amount.toFixed(2)}</td>
-                        <td style={{ padding: 8, borderBottom: '1px solid var(--border)' }}>{r.category}</td>
+                        <td style={{ padding: 8, borderBottom: '1px solid var(--border)' }}>{categoryLabels[r.category]}</td>
                         <td style={{ padding: 8, borderBottom: '1px solid var(--border)' }}>{r.note || ''}</td>
                       </tr>
                     ))}
