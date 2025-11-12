@@ -96,15 +96,13 @@ export default function Settings() {
         <div className="stack" style={{ gap: 12 }}>
           <Input label="邮箱" placeholder="邮箱" value={email} onChange={e => setEmail(e.target.value)} />
           <Input label="新密码（留空不修改）" type="password" placeholder="新密码" value={password} onChange={e => setPassword(e.target.value)} />
-          <div>
-            <label style={{ display: 'block', marginBottom: 6 }}>偏好设置</label>
-            <textarea
-              value={preferencesText}
-              onChange={e => setPreferencesText(e.target.value)}
-              placeholder="例如：喜欢自然风光、清淡饮食、偏好公共交通等"
-              style={{ width: '100%', minHeight: 120, borderRadius: 8, border: '1px solid var(--border)', padding: 8, background: 'var(--bg)', color: 'var(--fg)' }}
-            />
-          </div>
+          <Input
+            label="偏好设置"
+            textarea
+            value={preferencesText}
+            onChange={e => setPreferencesText(e.target.value)}
+            placeholder="例如：喜欢自然风光、清淡饮食、偏好公共交通等"
+          />
         </div>
         <div style={{ display: 'flex', gap: 12, marginTop: 12, justifyContent: 'flex-end', alignItems: 'center' }}>
           <Button variant="primary" onClick={onSaveProfile}>保存个人设置</Button>
