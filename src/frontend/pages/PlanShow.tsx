@@ -258,18 +258,18 @@ export default function PlanShow() {
                       <DatePicker label="日期" value={date} onChange={(v) => setDate(v)} min={plan.start_date} max={plan.end_date} />
                       <Input label="金额" type="number" placeholder="例如：100" value={amount} onChange={e => setAmount(Number(e.target.value) || '')} />
                     </div>
-                    <div className="row" style={{ gap: 12, alignItems: 'center' }}>
+                    <div className="row" style={{ gap: 12, alignItems: 'center', justifyContent: 'center' }}>
                       <div className="label">类别</div>
-                      <select value={category} onChange={e => setCategory(e.target.value as ExpenseCategory)} style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                      <select value={category} onChange={e => setCategory(e.target.value as ExpenseCategory)} style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--bg)', color: 'var(--fg)', border: '1px solid var(--border)' }}>
                         {categories.map(c => <option key={c} value={c}>{categoryLabels[c]}</option>)}
                       </select>
                     </div>
                     <Input label="备注" placeholder="可选" value={note} onChange={e => setNote(e.target.value)} />
-                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 12, alignItems: 'center' }}>
                       <Button type="submit" variant="primary" disabled={!canSubmit}>添加支出</Button>
                       <Button type="button" variant="secondary" onClick={loadExpenses}>刷新列表与统计</Button>
-                      {expMsg && <span className="note">{expMsg}</span>}
                     </div>
+                    {expMsg && <div style={{ textAlign: 'center' }}><span className="note">{expMsg}</span></div>}
                   </form>
                 </Card>
 
