@@ -164,6 +164,16 @@ body {
   min-height: 420px;
 }
 
+/* Chart card: center pie chart and legend horizontally and vertically */
+.chart-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 360px;
+  padding: 12px 0;
+}
+
 /* Map card: make content area a flex column so map can fill remaining height */
 .card:has(.map-container) > div { position: relative; display: block; height: 100%; min-height: 0; }
 .map-container { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); height: 80%; }

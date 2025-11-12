@@ -7,6 +7,7 @@ import MapView from '../components/MapView';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import DatePicker from '../components/DatePicker';
+import PieChart from '../components/PieChart';
 
 type PlanDetail = {
   id: number;
@@ -258,14 +259,26 @@ export default function PlanShow() {
 
                 <Card title="统计概览">
                   {expStats ? (
-                    <div className="stack">
-                      <div className="kpi">总额：¥ {expStats.total.toFixed(2)}</div>
-                      <ul style={{ paddingLeft: 16 }}>
-                        {categories.map(c => (
-                          <li key={c}>{categoryLabels[c]}: ¥ {(expStats.byCategory?.[c] || 0).toFixed(2)}</li>
-                        ))}
-                      </ul>
-                    </div>
+                    (() => {
+                      const colorMap: Record<string, string> = {
+                        transport: '#4C78A8',
+                        accommodation: '#F58518',
+                        food: '#54A24B',
+                        entertainment: '#E45756',
+                        shopping: '#72B7B2',
+                        other: '#B279A2'
+                      };
+                      const chartData = categories.map(c => ({
+                        label: categoryLabels[c],
+                        value: Number(expStats.byCategory?.[c] || 0),
+                        color: colorMap[c]
+                      }));
+                      return (
+                        <div className="chart-card">
+                          <PieChart data={chartData} size={170} thickness={34} />
+                        </div>
+                      );
+                    })()
                   ) : (
                     <div className="note">暂无统计数据，请先添加支出或刷新。</div>
                   )}
