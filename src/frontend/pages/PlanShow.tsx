@@ -26,6 +26,7 @@ export default function PlanShow() {
   const [msg, setMsg] = React.useState('');
   const [baiduAk, setBaiduAk] = React.useState<string | undefined>();
   const [selectedDay, setSelectedDay] = React.useState<number>(0);
+  const [viewTab, setViewTab] = React.useState<'itinerary' | 'expenses'>('itinerary');
 
   // 费用与支出管理（按行程）
   type ExpenseCategory = 'transport' | 'accommodation' | 'food' | 'entertainment' | 'shopping' | 'other';
@@ -168,104 +169,140 @@ export default function PlanShow() {
                 </div>
               </Card>
 
-          <Card title="选择查看的日期">
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {plan.days.map((_, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setSelectedDay(idx)}
-                  style={{
-                    padding: '6px 10px',
-                    borderRadius: 8,
-                    border: '1px solid var(--border)',
-                    background: idx === selectedDay ? 'var(--primary)' : 'var(--bg)',
-                    color: idx === selectedDay ? '#fff' : 'var(--fg)',
-                    cursor: 'pointer'
-                  }}
-                >第{idx + 1}天</button>
-              ))}
+          {/* 视图切换：具体行程 / 费用管理 */}
+          <Card>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => setViewTab('itinerary')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 8,
+                  border: '1px solid var(--border)',
+                  background: viewTab === 'itinerary' ? 'var(--primary)' : 'var(--bg)',
+                  color: viewTab === 'itinerary' ? '#fff' : 'var(--text)',
+                  cursor: 'pointer'
+                }}
+              >具体行程</button>
+              <button
+                type="button"
+                onClick={() => setViewTab('expenses')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 8,
+                  border: '1px solid var(--border)',
+                  background: viewTab === 'expenses' ? 'var(--primary)' : 'var(--bg)',
+                  color: viewTab === 'expenses' ? '#fff' : 'var(--text)',
+                  cursor: 'pointer'
+                }}
+              >费用管理</button>
             </div>
           </Card>
 
-          
-
-          <div className="grid two">
-            <div className={((plan.days?.[selectedDay]?.segments || []).length) < 4 ? 'fit-column' : undefined} style={{ minHeight: ((plan.days?.[selectedDay]?.segments || []).length) < 4 ? 550 : undefined }}>
-              <ItineraryView itinerary={plan as any} singleDayIndex={selectedDay} hideHeaderMeta={true} />
-            </div>
-            <MapView itinerary={plan as any} apiKey={baiduAk} dayIndex={selectedDay} hideControls={true} />
-          </div>
-
-          {/* 费用与支出管理（嵌入行程详情页） */}
-          <div className="spacer" />
-          <div className="grid two">
-            <Card title="新增支出">
-              <form onSubmit={onAddExpense} className="stack">
-                <div className="grid two">
-                  <DatePicker label="日期" value={date} onChange={(v) => setDate(v)} min={plan.start_date} max={plan.end_date} />
-                  <Input label="金额" type="number" placeholder="例如：100" value={amount} onChange={e => setAmount(Number(e.target.value) || '')} />
+          {viewTab === 'itinerary' && (
+            <>
+              <Card title="选择查看的日期">
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {plan.days.map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setSelectedDay(idx)}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: 8,
+                        border: '1px solid var(--border)',
+                        background: idx === selectedDay ? 'var(--primary)' : 'var(--bg)',
+                        color: idx === selectedDay ? '#fff' : 'var(--fg)',
+                        cursor: 'pointer'
+                      }}
+                    >第{idx + 1}天</button>
+                  ))}
                 </div>
-                <div className="row" style={{ gap: 12, alignItems: 'center' }}>
-                  <div className="label">类别</div>
-                  <select value={category} onChange={e => setCategory(e.target.value as ExpenseCategory)} style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)' }}>
-                    {categories.map(c => <option key={c} value={c}>{categoryLabels[c]}</option>)}
-                  </select>
-                </div>
-                <Input label="备注" placeholder="可选" value={note} onChange={e => setNote(e.target.value)} />
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <Button type="submit" variant="primary" disabled={!canSubmit}>添加支出</Button>
-                  <Button type="button" variant="secondary" onClick={loadExpenses}>刷新列表与统计</Button>
-                  {expMsg && <span className="note">{expMsg}</span>}
-                </div>
-              </form>
-            </Card>
+              </Card>
 
-            <Card title="统计概览">
-              {expStats ? (
-                <div className="stack">
-                  <div className="kpi">总额：¥ {expStats.total.toFixed(2)}</div>
-                  <ul style={{ paddingLeft: 16 }}>
-                    {categories.map(c => (
-                      <li key={c}>{categoryLabels[c]}: ¥ {(expStats.byCategory?.[c] || 0).toFixed(2)}</li>
-                    ))}
-                  </ul>
+              <div className="grid two">
+                <div className={((plan.days?.[selectedDay]?.segments || []).length) < 4 ? 'fit-column' : undefined} style={{ minHeight: ((plan.days?.[selectedDay]?.segments || []).length) < 4 ? 550 : undefined }}>
+                  <ItineraryView itinerary={plan as any} singleDayIndex={selectedDay} hideHeaderMeta={true} />
                 </div>
-              ) : (
-                <div className="note">暂无统计数据，请先添加支出或刷新。</div>
-              )}
-            </Card>
-          </div>
-
-          <div className="spacer" />
-          <Card title="支出列表">
-            {expList.length === 0 ? (
-              <div className="note">暂无数据</div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--border)' }}>日期</th>
-                      <th style={{ textAlign: 'right', padding: 8, borderBottom: '1px solid var(--border)' }}>金额</th>
-                      <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--border)' }}>类别</th>
-                      <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--border)' }}>备注</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {expList.map(r => (
-                      <tr key={r.id}>
-                        <td style={{ padding: 8, borderBottom: '1px solid var(--border)' }}>{r.date}</td>
-                        <td style={{ padding: 8, borderBottom: '1px solid var(--border)', textAlign: 'right' }}>¥ {r.amount.toFixed(2)}</td>
-                        <td style={{ padding: 8, borderBottom: '1px solid var(--border)' }}>{categoryLabels[r.category]}</td>
-                        <td style={{ padding: 8, borderBottom: '1px solid var(--border)' }}>{r.note || ''}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <MapView itinerary={plan as any} apiKey={baiduAk} dayIndex={selectedDay} hideControls={true} />
               </div>
-            )}
-          </Card>
+            </>
+          )}
+
+          {viewTab === 'expenses' && (
+            <>
+              {/* 费用与支出管理 */}
+              <div className="spacer" />
+              <div className="grid two">
+                <Card title="新增支出">
+                  <form onSubmit={onAddExpense} className="stack">
+                    <div className="grid two">
+                      <DatePicker label="日期" value={date} onChange={(v) => setDate(v)} min={plan.start_date} max={plan.end_date} />
+                      <Input label="金额" type="number" placeholder="例如：100" value={amount} onChange={e => setAmount(Number(e.target.value) || '')} />
+                    </div>
+                    <div className="row" style={{ gap: 12, alignItems: 'center' }}>
+                      <div className="label">类别</div>
+                      <select value={category} onChange={e => setCategory(e.target.value as ExpenseCategory)} style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                        {categories.map(c => <option key={c} value={c}>{categoryLabels[c]}</option>)}
+                      </select>
+                    </div>
+                    <Input label="备注" placeholder="可选" value={note} onChange={e => setNote(e.target.value)} />
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                      <Button type="submit" variant="primary" disabled={!canSubmit}>添加支出</Button>
+                      <Button type="button" variant="secondary" onClick={loadExpenses}>刷新列表与统计</Button>
+                      {expMsg && <span className="note">{expMsg}</span>}
+                    </div>
+                  </form>
+                </Card>
+
+                <Card title="统计概览">
+                  {expStats ? (
+                    <div className="stack">
+                      <div className="kpi">总额：¥ {expStats.total.toFixed(2)}</div>
+                      <ul style={{ paddingLeft: 16 }}>
+                        {categories.map(c => (
+                          <li key={c}>{categoryLabels[c]}: ¥ {(expStats.byCategory?.[c] || 0).toFixed(2)}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <div className="note">暂无统计数据，请先添加支出或刷新。</div>
+                  )}
+                </Card>
+              </div>
+
+              <div className="spacer" />
+              <Card title="支出列表">
+                {expList.length === 0 ? (
+                  <div className="note">暂无数据</div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--border)' }}>日期</th>
+                          <th style={{ textAlign: 'right', padding: 8, borderBottom: '1px solid var(--border)' }}>金额</th>
+                          <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--border)' }}>类别</th>
+                          <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--border)' }}>备注</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {expList.map(r => (
+                          <tr key={r.id}>
+                            <td style={{ padding: 8, borderBottom: '1px solid var(--border)' }}>{r.date}</td>
+                            <td style={{ padding: 8, borderBottom: '1px solid var(--border)', textAlign: 'right' }}>¥ {r.amount.toFixed(2)}</td>
+                            <td style={{ padding: 8, borderBottom: '1px solid var(--border)' }}>{categoryLabels[r.category]}</td>
+                            <td style={{ padding: 8, borderBottom: '1px solid var(--border)' }}>{r.note || ''}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Card>
+            </>
+          )}
         </div>
       )}
     </div>
