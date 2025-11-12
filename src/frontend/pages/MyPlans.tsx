@@ -64,7 +64,7 @@ export default function MyPlans() {
         {!loading && plans.length === 0 && (
           <div className="stack">
             <div>暂无已保存的行程。</div>
-            <div>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
               <Button type="button" variant="primary" onClick={() => navigate('/plan/new')}>去新建行程</Button>
             </div>
           </div>

@@ -24,8 +24,8 @@ export default function App() {
           {/** 费用功能已融入行程详情页，移除独立路由 */}
           <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
         </Routes>
-        <div className="footer">AI Travel Planner · Better trips with smarter planning ✈️</div>
       </main>
+      <div className="footer">AI Travel Planner · Better trips with smarter planning ✈️</div>
     </div>
   );
 }
