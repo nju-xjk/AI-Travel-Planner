@@ -130,28 +130,27 @@ export default function PlanShow() {
 
   return (
     <div className="container" style={{ maxWidth: 1180 }}>
-      <Card title="行程详情">
-        {loading && <div>加载中…</div>}
-        {!loading && !plan && <div>未找到该行程或无权限查看。</div>}
-        {!loading && plan && (
-          <div className="stack" style={{ gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontWeight: 600 }}>{plan.origin ? `${plan.origin} → ${plan.destination}` : plan.destination}</div>
-              <div className="note">{plan.start_date} ~ {plan.end_date}{plan.party_size ? ` · ${plan.party_size}人` : ''}{plan.budget ? ` · 预算¥${plan.budget}` : ''}</div>
-            </div>
-            <div className="note">行程ID：{plan.id}</div>
-          </div>
-        )}
-        {msg && <span className="note">{msg}</span>}
-      </Card>
+      {loading && (
+        <Card>
+          <div>加载中…</div>
+        </Card>
+      )}
+      {!loading && !plan && (
+        <Card>
+          <div>未找到该行程或无权限查看。</div>
+        </Card>
+      )}
 
       {plan && (
         <div className="stack" style={{ gap: 16 }}>
-              {/* 元信息模块：以 Card 包裹，居中展示地点、日期、总预算（无标题） */}
-              <Card>
+              {/* 元信息模块：增加标题“行程详情”，居中展示地点、日期、人数、总预算 */}
+              <Card title="行程详情">
                 <div className="meta-bar">
                   <span className="meta-chip"><strong>📍</strong> {plan.origin ? `${plan.origin} → ${plan.destination}` : plan.destination}</span>
                   <span className="meta-chip"><strong>🗓️</strong> {plan.start_date} → {plan.end_date}</span>
+                  {typeof plan.party_size === 'number' && plan.party_size > 0 ? (
+                    <span className="meta-chip"><strong>👥</strong> {plan.party_size}人</span>
+                  ) : null}
                   {(() => {
                     const days = plan?.days || [];
                 let total = typeof plan?.budget === 'number' ? Number(plan.budget) : 0;
@@ -169,6 +168,7 @@ export default function PlanShow() {
               })()}
                 </div>
               </Card>
+              {msg && <span className="note">{msg}</span>}
 
           {/* 视图切换：具体行程 / 费用管理 */}
           <Card>
