@@ -6,6 +6,7 @@ import ItineraryView from '../components/ItineraryView';
 import MapView from '../components/MapView';
 import Button from '../components/Button';
 import Input from '../components/Input';
+import DatePicker from '../components/DatePicker';
 
 type PlanDetail = {
   id: number;
@@ -46,8 +47,10 @@ export default function PlanShow() {
   const [expStats, setExpStats] = React.useState<ExpenseStats | null>(null);
   const [expMsg, setExpMsg] = React.useState<string>('');
   const canSubmit = React.useMemo(() => {
-    return !!plan?.id && typeof amount === 'number' && amount > 0 && !!date;
-  }, [plan?.id, amount, date]);
+    if (!plan?.id) return false;
+    const inRange = (!plan?.start_date || date >= plan.start_date) && (!plan?.end_date || date <= plan.end_date);
+    return typeof amount === 'number' && amount > 0 && !!date && inRange;
+  }, [plan?.id, amount, date, plan?.start_date, plan?.end_date]);
 
   React.useEffect(() => {
     (async () => {
@@ -71,6 +74,10 @@ export default function PlanShow() {
       } else {
         setPlan(res.data);
         setSelectedDay(0);
+        // 若当前日期不在行程范围内，则默认设为行程开始日期
+        const s = res.data.start_date;
+        const e = res.data.end_date;
+        if (date < s || date > e) setDate(s);
       }
       setLoading(false);
     })();
@@ -188,7 +195,7 @@ export default function PlanShow() {
             <Card title="新增支出">
               <form onSubmit={onAddExpense} className="stack">
                 <div className="grid two">
-                  <Input label="日期" placeholder="YYYY-MM-DD" value={date} onChange={e => setDate(e.target.value)} />
+                  <DatePicker label="日期" value={date} onChange={(v) => setDate(v)} min={plan.start_date} max={plan.end_date} />
                   <Input label="金额" type="number" placeholder="例如：100" value={amount} onChange={e => setAmount(Number(e.target.value) || '')} />
                 </div>
                 <div className="row" style={{ gap: 12, alignItems: 'center' }}>
