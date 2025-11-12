@@ -642,6 +642,10 @@ export default function PlanNew() {
                     <span className="meta-chip"><strong>📍</strong> {result.origin ? `${result.origin} → ${result.destination}` : result.destination}</span>
                     <span className="meta-chip"><strong>🗓️</strong> {result.start_date} → {result.end_date}</span>
                     {(() => {
+                      const count = typeof result?.party_size === 'number' ? Number(result.party_size) : (typeof partySize === 'number' ? Number(partySize) : 0);
+                      return count > 0 ? <span className="meta-chip"><strong>👥</strong> {count}人</span> : null;
+                    })()}
+                    {(() => {
                       const days = result?.days || [];
                       let total = typeof result?.budget === 'number' ? Number(result.budget) : 0;
                       if (!total) {
