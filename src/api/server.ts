@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import { correlationId } from './middlewares/correlationId';
 import { createRequestLogger } from './middlewares/requestLogger';
 import { loadConfig } from '../config';
@@ -21,6 +22,13 @@ export interface ServerOptions {
 export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }) {
   const app = express();
   app.use(express.json());
+  // support frontend calling /api/* by stripping the prefix to backend routes
+  app.use((req, _res, next) => {
+    if (req.url.startsWith('/api/')) {
+      req.url = req.url.replace(/^\/api/, '');
+    }
+    next();
+  });
   // request correlation id & logging (controlled via env)
   const env = process.env.NODE_ENV || 'development';
   const logLevel = (process.env.LOG_LEVEL || (env === 'development' ? 'debug' : 'info')) as any;
@@ -71,6 +79,19 @@ export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }
   app.use('/settings', createSettingsRouter());
   app.use('/metrics', createMetricsRouter());
   app.use('/speech', createSpeechRouter());
+
+  // serve built frontend assets (Vite build output under /dist)
+  const distDir = path.resolve(process.cwd(), 'dist');
+  app.use(express.static(distDir));
+  // SPA fallback: return index.html for non-API GET requests
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    try {
+      res.sendFile(path.join(distDir, 'index.html'));
+    } catch {
+      next();
+    }
+  });
 
   // 404 handler
   app.use((_req, res) => {
