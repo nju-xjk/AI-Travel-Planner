@@ -1,7 +1,7 @@
 # Multi-stage build for AI Travel Planner (frontend + backend)
 
 # 1) Build frontend (Vite)
-FROM node:20-alpine AS frontend
+FROM mcr.microsoft.com/devcontainers/javascript-node:20 AS frontend
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -9,7 +9,7 @@ COPY . .
 RUN npm run build:frontend
 
 # 2) Build backend (TypeScript)
-FROM node:20-alpine AS backend
+FROM mcr.microsoft.com/devcontainers/javascript-node:20 AS backend
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.json ./
 RUN npm ci
@@ -17,7 +17,7 @@ COPY src ./src
 RUN npm run build
 
 # 3) Runtime image
-FROM node:20-alpine AS runtime
+FROM mcr.microsoft.com/devcontainers/javascript-node:20 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000

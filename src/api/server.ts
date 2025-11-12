@@ -23,9 +23,12 @@ export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }
   const app = express();
   app.use(express.json());
   // support frontend calling /api/* by stripping the prefix to backend routes
-  app.use((req, _res, next) => {
-    if (req.url.startsWith('/api/')) {
-      req.url = req.url.replace(/^\/api/, '');
+  // also mark requests that originally carried the /api prefix
+  app.use((req, res, next) => {
+    const hadPrefix = req.url.startsWith('/api');
+    (res.locals as any).apiPrefixed = hadPrefix;
+    if (hadPrefix) {
+      req.url = req.url.replace(/^\/api/, '') || '/';
     }
     next();
   });
@@ -50,25 +53,28 @@ export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }
     res.status(200).json({ status: 'ok' });
   });
 
-  // API index for root path
-  app.get('/', (_req, res) => {
-    res.status(200).json({
-      status: 'ok',
-      message: 'AI Travel Planner API',
-      endpoints: [
-        { method: 'GET', path: '/health' },
-        { method: 'POST', path: '/auth/register' },
-        { method: 'POST', path: '/auth/login' },
-        { method: 'POST', path: '/auth/logout' },
-        { method: 'POST', path: '/planner/suggest' },
-        { method: 'POST', path: '/planner/generate' },
-        { method: 'POST', path: '/budget/estimate' },
-        { method: 'POST', path: '/expenses' },
-        { method: 'GET', path: '/expenses' },
-        { method: 'GET', path: '/expenses/stats' },
-        { method: 'POST', path: '/speech/recognize' }
-      ]
-    });
+  // API index for root path only when original request had /api prefix; otherwise hand over to SPA
+  app.get('/', (req, res, next) => {
+    if ((res.locals as any).apiPrefixed) {
+      return res.status(200).json({
+        status: 'ok',
+        message: 'AI Travel Planner API',
+        endpoints: [
+          { method: 'GET', path: '/health' },
+          { method: 'POST', path: '/auth/register' },
+          { method: 'POST', path: '/auth/login' },
+          { method: 'POST', path: '/auth/logout' },
+          { method: 'POST', path: '/planner/suggest' },
+          { method: 'POST', path: '/planner/generate' },
+          { method: 'POST', path: '/budget/estimate' },
+          { method: 'POST', path: '/expenses' },
+          { method: 'GET', path: '/expenses' },
+          { method: 'GET', path: '/expenses/stats' },
+          { method: 'POST', path: '/speech/recognize' }
+        ]
+      });
+    }
+    return next();
   });
 
   app.use('/auth', createAuthRouter(db, { jwtSecret: opts.jwtSecret }));
@@ -84,8 +90,8 @@ export function createApp(opts: ServerOptions & { db?: import('../data/db').DB }
   const distDir = path.resolve(process.cwd(), 'dist');
   app.use(express.static(distDir));
   // SPA fallback: return index.html for non-API GET requests
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) return next();
+  app.get(/.*/, (req, res, next) => {
+    if ((res.locals as any).apiPrefixed) return next();
     try {
       res.sendFile(path.join(distDir, 'index.html'));
     } catch {

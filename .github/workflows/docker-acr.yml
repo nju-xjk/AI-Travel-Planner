@@ -32,3 +32,23 @@ jobs:
           tags: |
             ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAMESPACE }}/${{ secrets.ALIYUN_REPO }}:latest
             ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAMESPACE }}/${{ secrets.ALIYUN_REPO }}:${{ github.sha }}
+
+      - name: Build local image for artifact
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          load: true
+          platforms: linux/amd64
+          tags: |
+            ai-travel-planner:latest
+
+      - name: Export image to tar
+        run: docker save -o ai-travel-planner.tar ai-travel-planner:latest
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-travel-planner-image
+          path: ai-travel-planner.tar
+          retention-days: 90
