@@ -11,7 +11,12 @@ export async function api<T>(path: string, init?: RequestInit): Promise<ApiRespo
   headers.set('Content-Type', 'application/json');
   const token = getToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
-  const res = await fetch(path, { ...init, headers });
+  // 统一为后端接口加上 /api 前缀，避免与前端路由冲突
+  const normalized = (() => {
+    if (!path.startsWith('/')) return '/api/' + path;
+    return path.startsWith('/api/') ? path : '/api' + path;
+  })();
+  const res = await fetch(normalized, { ...init, headers });
   if (res.status === 401) {
     // token 失效或未授权，清理本地状态并跳到登录页
     clearToken();
