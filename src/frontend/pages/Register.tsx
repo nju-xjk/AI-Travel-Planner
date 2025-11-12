@@ -31,17 +31,19 @@ export default function Register() {
   };
 
   return (
-    <div className="container" style={{ maxWidth: 520 }}>
+    <div className="container" style={{ maxWidth: 640 }}>
       <Card title="注册">
+        <div className="auth-form" style={{ width: 'min(600px, 100%)', margin: '0 auto', padding: '0 12px' }}>
         <form onSubmit={onRegister} className="stack">
           <Input label="邮箱" placeholder="邮箱" value={email} onChange={e => setEmail(e.target.value)} />
           <Input label="密码" type="password" placeholder="密码" value={password} onChange={e => setPassword(e.target.value)} />
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', width: '100%' }}>
             <Button type="submit" variant="primary" disabled={loading}>{loading ? '注册中...' : '注册'}</Button>
             <Button type="button" variant="secondary" onClick={() => navigate('/login')}>已有账号？去登录</Button>
           </div>
           {msg && <div className="note">{msg}</div>}
         </form>
+        </div>
       </Card>
     </div>
   );

@@ -7,8 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import { isAuthenticated } from '../auth';
 
 export default function Login() {
-  const [email, setEmail] = useState('test@example.com');
-  const [password, setPassword] = useState('password');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -41,18 +41,19 @@ export default function Login() {
   };
 
   return (
-    <div className="container" style={{ maxWidth: 520 }}>
+    <div className="container" style={{ maxWidth: 640 }}>
       <Card title="登录">
+        <div className="auth-form" style={{ width: 'min(600px, 100%)', margin: '0 auto', padding: '0 12px' }}>
         <form onSubmit={onLogin} className="stack">
           <Input label="邮箱" placeholder="邮箱" value={email} onChange={e => setEmail(e.target.value)} />
           <Input label="密码" type="password" placeholder="密码" value={password} onChange={e => setPassword(e.target.value)} />
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', width: '100%' }}>
             <Button type="submit" variant="primary" disabled={loading}>{loading ? '登录中...' : '登录'}</Button>
-            <Button type="button" variant="secondary" onClick={() => { setEmail('test@example.com'); setPassword('password'); }}>填充示例</Button>
-            <Button type="button" variant="secondary" onClick={() => navigate('/register')}>去注册</Button>
+            <Button type="button" variant="secondary" onClick={() => navigate('/register')}>没有账号？去注册</Button>
           </div>
           {msg && <div className="note">{msg}</div>}
         </form>
+        </div>
       </Card>
     </div>
   );
