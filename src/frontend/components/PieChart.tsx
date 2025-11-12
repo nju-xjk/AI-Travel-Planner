@@ -35,9 +35,10 @@ export default function PieChart({ data, size = 220, thickness = 40 }: { data: P
   const cy = size / 2;
   const rOuter = size / 2;
   const rInner = rOuter - thickness;
+  const positiveItems = data.filter(d => d.value > 0);
 
   let currentAngle = 0;
-  const segments = total > 0
+  const segments = total > 0 && positiveItems.length !== 1
     ? data.map((d) => {
         const angle = (d.value / total) * 360;
         const seg = {
@@ -58,6 +59,14 @@ export default function PieChart({ data, size = 220, thickness = 40 }: { data: P
         {/* 背景圆（无数据时显示灰圈）*/}
         {segments.length === 0 && (
           <circle cx={cx} cy={cy} r={rOuter} fill="var(--surface)" />
+        )}
+        {/* 单一分段：使用圆环避免 360° 弧形退化为黑色 */}
+        {total > 0 && positiveItems.length === 1 && (
+          (() => {
+            const ringR = (rOuter + rInner) / 2;
+            const ringW = rOuter - rInner; // thickness
+            return <circle cx={cx} cy={cy} r={ringR} fill="none" stroke={positiveItems[0].color} strokeWidth={ringW} />;
+          })()
         )}
         {/* 饼图分段 */}
         {segments.map((seg, i) => (
